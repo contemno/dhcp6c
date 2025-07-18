@@ -480,7 +480,7 @@ setenv:
 			val[0] = hex[(rawop->data[o]>>4) & 0x0F];
 			val[1] = hex[(rawop->data[o]   ) & 0x0F];
 			val[2] = 0x00;
-			strlcat(s, val, 1);
+			strlcat(s, val, elen);
 		}
 		free(val);
 	}

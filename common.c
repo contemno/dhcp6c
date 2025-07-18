@@ -1516,6 +1516,7 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 	struct dhcp6opt_ia optia;
 	struct dhcp6_ia ia;
 	struct dhcp6_list sublist;
+	struct rawoption *rawop;
 	int authinfolen;
 
 	bp = (char *)p;
@@ -1916,10 +1917,27 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 			dhcp6_clear_list(&sublist);
 			break;
 		default:
-			/* no option specific behavior */
-			d_printf(LOG_INFO, FNAME,
-			    "unknown or unexpected DHCP6 option %s, len %d",
-			    dhcp6optstr(opt), optlen);
+			if ((rawop = malloc(sizeof(*rawop))) == NULL) {
+				d_printf(LOG_ERR, FNAME,
+					"failed to allocate memory for a new raw option");
+				return(-1);
+			}
+
+			memset(rawop, 0, sizeof(*rawop));
+
+			rawop->opnum = opt;
+			rawop->datalen = optlen;
+
+			/* copy data */
+			if ((rawop->data = malloc(rawop->datalen)) == NULL) {
+				d_printf(LOG_ERR, FNAME,
+				    "failed to allocate memory for new raw option data");
+				return(-1);
+			}
+			memcpy(rawop->data, cp, rawop->datalen);
+
+			TAILQ_INSERT_TAIL(&optinfo->rawops, rawop, link);
+
 			break;
 		}
 	}

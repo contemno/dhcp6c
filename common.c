@@ -80,6 +80,7 @@
 #include <err.h>
 #include <netdb.h>
 #include <ifaddrs.h>
+#include <inttypes.h>
 
 #include "dhcp6.h"
 #include "config.h"
@@ -1628,7 +1629,7 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 				goto malformed;
 			memcpy(&val16, cp, sizeof(val16));
 			val16 = ntohs(val16);
-			d_printf(LOG_DEBUG, "", "  elapsed time: %lu",
+			d_printf(LOG_DEBUG, "", "  elapsed time: %" PRIu32,
 			    (uint32_t)val16);
 			if (optinfo->elapsed_time !=
 			    DH6OPT_ELAPSED_TIME_UNDEF) {
@@ -1814,14 +1815,14 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 			ia.t2 = ntohl(optia.dh6_ia_t2);
 
 			d_printf(LOG_DEBUG, "",
-			    "  IA_PD: ID=%lu, T1=%lu, T2=%lu",
+			    "  IA_PD: ID=%" PRIu32 ", T1=%" PRIu32 ", T2=%" PRIu32,
 			    ia.iaid, ia.t1, ia.t2);
 
 			/* duplication check */
 			if (dhcp6_find_listval(&optinfo->iapd_list,
 			    DHCP6_LISTVAL_IAPD, &ia, 0)) {
 				d_printf(LOG_INFO, FNAME,
-				    "duplicated IA_PD %lu", ia.iaid);
+				    "duplicated IA_PD %" PRIu32, ia.iaid);
 				break; /* ignore this IA_PD */
 			}
 
@@ -1848,7 +1849,7 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 			memcpy(&val32, cp, sizeof(val32));
 			val32 = ntohl(val32);
 			d_printf(LOG_DEBUG, "",
-			    "   information refresh time: %lu", val32);
+			    "   information refresh time: %" PRIu32, val32);
 			if (val32 < DHCP6_IRT_MINIMUM) {
 				/*
 				 * A client MUST use the refresh time
@@ -1858,7 +1859,7 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 				 *  Section 3.2]
 				 */
 				d_printf(LOG_INFO, FNAME,
-				    "refresh time is too small (%d), adjusted",
+				    "refresh time is too small (%" PRIu32 "), adjusted",
 				    val32);
 				val32 = DHCP6_IRT_MINIMUM;
 			}
@@ -1878,14 +1879,14 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 			ia.t2 = ntohl(optia.dh6_ia_t2);
 
 			d_printf(LOG_DEBUG, "",
-			    "  IA_NA: ID=%lu, T1=%lu, T2=%lu",
+			    "  IA_NA: ID=%" PRIu32 ", T1=%" PRIu32 ", T2=%" PRIu32,
 			    ia.iaid, ia.t1, ia.t2);
 
 			/* duplication check */
 			if (dhcp6_find_listval(&optinfo->iana_list,
 			    DHCP6_LISTVAL_IANA, &ia, 0)) {
 				d_printf(LOG_INFO, FNAME,
-				    "duplicated IA_NA %lu", ia.iaid);
+				    "duplicated IA_NA %" PRIu32, ia.iaid);
 				break; /* ignore this IA_NA */
 			}
 
@@ -2036,7 +2037,7 @@ copyin_option(int type, struct dhcp6opt *p, struct dhcp6opt *ep,
 			prefix6_mask(&iapd_prefix.addr, iapd_prefix.plen);
 
 			d_printf(LOG_DEBUG, FNAME, "  IA_PD prefix: "
-			    "%s/%d pltime=%lu vltime=%lu",
+			    "%s/%d pltime=%" PRIu32 " vltime=%" PRIu32,
 			    in6addr2str(&iapd_prefix.addr, 0),
 			    iapd_prefix.plen,
 			    iapd_prefix.pltime, iapd_prefix.vltime);
@@ -2045,7 +2046,7 @@ copyin_option(int type, struct dhcp6opt *p, struct dhcp6opt *ep,
 			    &iapd_prefix, 0)) {
 				d_printf(LOG_INFO, FNAME,
 				    "duplicated IA_PD prefix "
-				    "%s/%d pltime=%lu vltime=%lu",
+				    "%s/%d pltime=%" PRIu32 " vltime=%" PRIu32,
 				    in6addr2str(&iapd_prefix.addr, 0),
 				    iapd_prefix.plen,
 				    iapd_prefix.pltime, iapd_prefix.vltime);
@@ -2087,7 +2088,7 @@ copyin_option(int type, struct dhcp6opt *p, struct dhcp6opt *ep,
 			    sizeof(ia_addr.addr));
 
 			d_printf(LOG_DEBUG, FNAME, "  IA_NA address: "
-			    "%s pltime=%lu vltime=%lu",
+			    "%s pltime=%" PRIu32 " vltime=%" PRIu32,
 			    in6addr2str(&ia_addr.addr, 0),
 			    ia_addr.pltime, ia_addr.vltime);
 
@@ -2095,7 +2096,7 @@ copyin_option(int type, struct dhcp6opt *p, struct dhcp6opt *ep,
 			    DHCP6_LISTVAL_STATEFULADDR6, &ia_addr, 0)) {
 				d_printf(LOG_INFO, FNAME,
 				    "duplicated IA_NA address"
-				    "%s pltime=%lu vltime=%lu",
+				    "%s pltime=%" PRIu32 " vltime=%" PRIu32,
 				    in6addr2str(&ia_addr.addr, 0),
 				    ia_addr.pltime, ia_addr.vltime);
 				goto nextoption;

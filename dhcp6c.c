@@ -68,6 +68,7 @@
 #include <err.h>
 #include <ifaddrs.h>
 #include <fcntl.h>
+#include <inttypes.h>
 
 #include "dhcp6.h"
 #include "config.h"
@@ -1761,8 +1762,8 @@ client6_recvreply(struct dhcp6_if *ifp, struct dhcp6 *dh6,
 				 * unsigned 32bit value.
 				 */
 				d_printf(LOG_WARNING, FNAME,
-				    "refresh time is too large: %lu",
-				    (uint32_t)refreshtime);
+				    "refresh time is too large: %" PRIu64,
+				    refreshtime);
 				tv.tv_sec = 0x7fffffff;	/* XXX */
 			}
 

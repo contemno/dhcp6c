@@ -52,6 +52,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include "dhcp6.h"
 #include "config.h"
@@ -138,7 +139,7 @@ update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
 	    (pinfo->pltime == DHCP6_DURATION_INFINITE ||
 	    pinfo->pltime > pinfo->vltime)) {
 		d_printf(LOG_INFO, FNAME, "invalid prefix %s/%d: "
-		    "pltime (%lu) is larger than vltime (%lu)",
+		    "pltime (%" PRIu32 ") is larger than vltime (%" PRIu32 ")",
 		    in6addr2str(&pinfo->addr, 0), pinfo->plen,
 		    pinfo->pltime, pinfo->vltime);
 		return (-1);
@@ -188,8 +189,8 @@ update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
 	/* update the prefix according to pinfo */
 	sp->prefix.pltime = pinfo->pltime;
 	sp->prefix.vltime = pinfo->vltime;
-	d_printf(LOG_DEBUG, FNAME, "%s a prefix %s/%d pltime=%lu, vltime=%lu",
-	    spcreate ? "create" : "update",
+	d_printf(LOG_DEBUG, FNAME, "%s a prefix %s/%d pltime=%" PRIu32
+	    ", vltime=%" PRIu32, spcreate ? "create" : "update",
 	    in6addr2str(&pinfo->addr, 0), pinfo->plen,
 	    pinfo->pltime, pinfo->vltime);
 

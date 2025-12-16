@@ -2141,7 +2141,7 @@ create_dynamic_hostconf(struct duid *duid, struct dhcp6_poolspec *pool)
 	if (dynamic_hostconf_count >= DHCP6_DYNAMIC_HOSTCONF_MAX) {
 		struct dynamic_hostconf_listhead *head = &dynamic_hostconf_head;
 
-		d_printf(LOG_DEBUG, FNAME, "reached to the max count (count=%lu)",
+		d_printf(LOG_DEBUG, FNAME, "reached to the max count (count=%u)",
 			dynamic_hostconf_count);
 
 		/* Find the last entry that doesn't need authentication */

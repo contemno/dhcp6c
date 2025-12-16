@@ -52,6 +52,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include "dhcp6.h"
 #include "config.h"
@@ -120,9 +121,8 @@ update_address(struct ia *ia, struct dhcp6_statefuladdr *addr,
 	    (addr->pltime == DHCP6_DURATION_INFINITE ||
 	    addr->pltime > addr->vltime)) {
 		d_printf(LOG_INFO, FNAME, "invalid address %s: "
-		    "pltime (%lu) is larger than vltime (%lu)",
-		    in6addr2str(&addr->addr, 0),
-		    addr->pltime, addr->vltime);
+		    "pltime (%" PRIu32 ") is larger than vltime (%" PRIu32 ")",
+		    in6addr2str(&addr->addr, 0), addr->pltime, addr->vltime);
 		return (-1);
 	}
 
@@ -166,10 +166,9 @@ update_address(struct ia *ia, struct dhcp6_statefuladdr *addr,
 	sa->addr.pltime = addr->pltime;
 	sa->addr.vltime = addr->vltime;
 	sa->dhcpif = dhcpifp;
-	d_printf(LOG_DEBUG, FNAME, "%s an address %s pltime=%u, vltime=%u",
-	    sacreate ? "create" : "update",
-	    in6addr2str(&addr->addr, 0), (unsigned int)addr->pltime,
-	    (unsigned int)addr->vltime);
+	d_printf(LOG_DEBUG, FNAME, "%s an address %s pltime=%" PRIu32
+	    ", vltime=%" PRIu32, sacreate ? "create" : "update",
+	    in6addr2str(&addr->addr, 0), addr->pltime, addr->vltime);
 
 	if (sa->addr.vltime != 0)
 		if (na_ifaddrconf(IFADDRCONF_ADD, sa) < 0)

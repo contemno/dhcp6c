@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "dhcp6.h"
 #include "config.h"
@@ -119,7 +120,7 @@ update_ia(iatype_t iatype, struct dhcp6_list *ialist, struct dhcp6_if *ifp,
 		 */
 		if (iav->val_ia.t2 != 0 && iav->val_ia.t1 > iav->val_ia.t2) {
 			d_printf(LOG_INFO, FNAME,
-			    "invalid IA: T1(%lu) > T2(%lu)",
+			    "invalid IA: T1(%" PRIu32 ") > T2(%" PRIu32 ")",
 			    iav->val_ia.t1, iav->val_ia.t2);
 			continue;
 		}
@@ -180,7 +181,7 @@ update_ia(iatype_t iatype, struct dhcp6_list *ialist, struct dhcp6_if *ifp,
 						 * XXX: what about the PD case?
 						 */
 						d_printf(LOG_NOTICE, FNAME,
-						    "received NoBinding for %s-%lu",
+						    "received NoBinding for %s-%" PRIu32,
 						    iastr(ia->conf->type),
 						    ia->conf->iaid);
 						reestablish_ia(ia);
@@ -193,7 +194,7 @@ update_ia(iatype_t iatype, struct dhcp6_list *ialist, struct dhcp6_if *ifp,
 						 * and start from scratch.
 						 */
 						d_printf(LOG_NOTICE, FNAME,
-						    "received NotOnLink for %s-%lu",
+						    "received NotOnLink for %s-%" PRIu32,
 						    iastr(ia->conf->type),
 						    ia->conf->iaid);
 						remove_ia(ia, 1);
@@ -207,7 +208,7 @@ update_ia(iatype_t iatype, struct dhcp6_list *ialist, struct dhcp6_if *ifp,
 						 * breaking the flow of the lease acquire.
 						 */
 						d_printf(LOG_NOTICE, FNAME,
-						    "received NoAddrAvail for %s-%lu",
+						    "received NoAddrAvail for %s-%" PRIu32,
 						    iastr(ia->conf->type),
 						    ia->conf->iaid);
 						remove_ia(ia, 1);
@@ -215,7 +216,7 @@ update_ia(iatype_t iatype, struct dhcp6_list *ialist, struct dhcp6_if *ifp,
 					}
 				}
 				d_printf(LOG_INFO, FNAME,
-				    "unhandled status code for %s-%lu: %s",
+				    "unhandled status code for %s-%" PRIu32 ": %s",
 				    iastr(iatype), iav->val_ia.iaid,
 				    dhcp6_stcodestr(siav->val_num16));
 				break;
@@ -227,7 +228,7 @@ update_ia(iatype_t iatype, struct dhcp6_list *ialist, struct dhcp6_if *ifp,
 
 		/* see if this IA is still valid.  if not, remove it. */
 		if (ia->ctl == NULL || !(*ia->ctl->isvalid)(ia->ctl)) {
-			d_printf(LOG_DEBUG, FNAME, "IA %s-%lu is invalidated",
+			d_printf(LOG_DEBUG, FNAME, "IA %s-%" PRIu32 " is invalidated",
 			    iastr(ia->conf->type), ia->conf->iaid);
 			remove_ia(ia, 1);
 			continue;
@@ -259,7 +260,7 @@ update_ia(iatype_t iatype, struct dhcp6_list *ialist, struct dhcp6_if *ifp,
 			if (ia->t1 > ia->t2)
 				ia->t1 = ia->t2 * 5 / 8;
 
-			d_printf(LOG_INFO, FNAME, "T1(%lu) and/or T2(%lu) "
+			d_printf(LOG_INFO, FNAME, "T1(%" PRIu32") and/or T2(%" PRIu32 ") "
 			    "is locally determined",  ia->t1, ia->t2);
 		}
 
@@ -269,11 +270,11 @@ update_ia(iatype_t iatype, struct dhcp6_list *ialist, struct dhcp6_if *ifp,
 		 * without renewal.
 		 */
 		if (ia->t2 < DHCP6_DURATION_MIN) {
-			d_printf(LOG_INFO, FNAME, "T1 (%lu) or T2 (%lu) "
+			d_printf(LOG_INFO, FNAME, "T1 (%" PRIu32 ") or T2 (%" PRIu32 ") "
 			    "is too small", ia->t1, ia->t2);
 			ia->t2 = DHCP6_DURATION_MIN;
 			ia->t1 = ia->t2 * 5 / 8;
-			d_printf(LOG_INFO, "", "  adjusted to %lu and %lu",
+			d_printf(LOG_INFO, "", "  adjusted to %" PRIu32 " and %" PRIu32,
 			    ia->t1, ia->t2);
 		}
 
@@ -331,7 +332,7 @@ reestablish_ia(struct ia *ia)
 	struct dhcp6_event *ev;
 	struct dhcp6_eventdata *evd;
 
-	d_printf(LOG_DEBUG, FNAME, "re-establishing IA: %s-%lu",
+	d_printf(LOG_DEBUG, FNAME, "re-establishing IA: %s-%" PRIu32,
 	    iastr(ia->conf->type), ia->conf->iaid);
 
 	if (ia->state != IAS_RENEW && ia->state != IAS_REBIND) {
@@ -421,7 +422,7 @@ callback( struct ia *ia)
 {
 	/* see if this IA is still valid.  if not, remove it. */
 	if (ia->ctl == NULL || !(*ia->ctl->isvalid)(ia->ctl)) {
-		d_printf(LOG_DEBUG, FNAME, "IA %s-%lu is invalidated",
+		d_printf(LOG_DEBUG, FNAME, "IA %s-%" PRIu32 " is invalidated",
 		    iastr(ia->conf->type), ia->conf->iaid);
 		remove_ia(ia, 1);
 	}
@@ -464,7 +465,7 @@ release_ia(struct ia *ia)
 	struct dhcp6_event *ev;
 	struct dhcp6_eventdata *evd;
 
-	d_printf(LOG_DEBUG, FNAME, "release an IA: %s-%lu",
+	d_printf(LOG_DEBUG, FNAME, "release an IA: %s-%" PRIu32,
 	    iastr(ia->conf->type), ia->conf->iaid);
 
 	if ((ev = dhcp6_create_event(ia->ifp, DHCP6S_RELEASE))
@@ -535,7 +536,7 @@ remove_ia(struct ia *ia, int restart)
 	struct ia_conf *iac = ia->conf;
 	struct dhcp6_if *ifp = ia->ifp;
 
-	d_printf(LOG_DEBUG, FNAME, "remove an IA: %s-%lu",
+	d_printf(LOG_DEBUG, FNAME, "remove an IA: %s-%" PRIu32,
 	    iastr(ia->conf->type), ia->conf->iaid);
 
 	TAILQ_REMOVE(&iac->iadata, ia, link);
@@ -575,7 +576,7 @@ ia_timo(void *arg)
 	struct timeval timo;
 	int dhcpstate;
 
-	d_printf(LOG_DEBUG, FNAME, "IA timeout for %s-%lu, state=%s",
+	d_printf(LOG_DEBUG, FNAME, "IA timeout for %s-%" PRIu32 ", state=%s",
 	    iastr(ia->conf->type), ia->conf->iaid, statestr(ia->state));
 
 	/* cancel the current event for the prefix. */
@@ -736,7 +737,7 @@ get_ia(iatype_t type, struct dhcp6_if *ifp, struct ia_conf *iac,
 	ia->ifp = ifp;
 	ia->serverid = newserver;
 
-	d_printf(LOG_DEBUG, FNAME, "%s an IA: %s-%lu",
+	d_printf(LOG_DEBUG, FNAME, "%s an IA: %s-%" PRIu32,
 	    create ? "make" : "update", iastr(type), ia->conf->iaid);
 
 	return (ia);

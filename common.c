@@ -3330,7 +3330,6 @@ ifaddrconf(ifaddrconf_cmd_t cmd, char *ifname, struct sockaddr_in6 *addr,
 	req.ifra_addr = *addr;
 	strlcpy(req.ifra_name, ifname, sizeof(req.ifra_name));
 	(void)sa6_plen2mask(&req.ifra_prefixmask, plen);
-	/* XXX: should lifetimes be calculated based on the lease duration? */
 	req.ifra_lifetime.ia6t_vltime = vltime;
 	req.ifra_lifetime.ia6t_pltime = pltime;
 #endif

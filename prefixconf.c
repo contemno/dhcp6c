@@ -96,7 +96,9 @@ struct dhcp6_ifprefix {
 
 	/* interface prefix parameters */
 	struct sockaddr_in6 paddr;
-	int plen;
+
+	/* prefix information */
+	struct dhcp6_prefix pinfo;
 
 	/* address assigned on the interface based on the prefix */
 	struct sockaddr_in6 ifaddr;
@@ -433,7 +435,7 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 		pconf->sla_len = 128 - pconf->ifid_len - prefix->plen;
 	}
 
-	ifpfx->plen = prefix->plen + pconf->sla_len;
+	ifpfx->pinfo.plen = prefix->plen + pconf->sla_len;
 	/*
 	 * XXX: our current implementation assumes ifid len is a multiple of 8
 	 */
@@ -442,8 +444,8 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 		    "assumption failure on the length of interface ID");
 		goto bad;
 	}
-	if (ifpfx->plen + pconf->ifid_len < 0 ||
-	    ifpfx->plen + pconf->ifid_len > 128) {
+	if (ifpfx->pinfo.plen + pconf->ifid_len < 0 ||
+	    ifpfx->pinfo.plen + pconf->ifid_len > 128) {
 		d_printf(LOG_INFO, FNAME,
 			"invalid prefix length %d + %d + %d",
 			prefix->plen, pconf->sla_len, pconf->ifid_len);
@@ -462,6 +464,19 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 		a->s6_addr[--i] = *sp;
 	if (b)
 		a->s6_addr[--i] |= *sp;
+
+#ifndef ND6_INFINITE_LIFETIME
+#define ND6_INFINITE_LIFETIME 0xffffffff
+#endif
+
+	/* fill prefix info from siteprefix except plen done earlier */
+	ifpfx->pinfo.addr = siteprefix->prefix.addr;
+	ifpfx->pinfo.pltime = siteprefix->prefix.pltime;
+	if (!ifpfx->pinfo.pltime || opt_norelease)
+		ifpfx->pinfo.pltime = ND6_INFINITE_LIFETIME;
+	ifpfx->pinfo.vltime = siteprefix->prefix.vltime;
+	if (!ifpfx->pinfo.vltime || opt_norelease)
+		ifpfx->pinfo.vltime = ND6_INFINITE_LIFETIME;
 
 	/* configure the corresponding address */
 	ifpfx->ifaddr = ifpfx->paddr;
@@ -482,16 +497,14 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 	return (-1);
 }
 
-#ifndef ND6_INFINITE_LIFETIME
-#define ND6_INFINITE_LIFETIME 0xffffffff
-#endif
-
 static int
 pd_ifaddrconf(ifaddrconf_cmd_t cmd, struct dhcp6_ifprefix *ifpfx)
 {
 	struct prefix_ifconf *pconf;
 
 	pconf = ifpfx->ifconf;
-	return (ifaddrconf(cmd, pconf->ifname, &ifpfx->ifaddr, ifpfx->plen,
-	    ND6_INFINITE_LIFETIME, ND6_INFINITE_LIFETIME));
+	return (ifaddrconf(cmd, pconf->ifname, &ifpfx->ifaddr,
+	    ifpfx->pinfo.plen,
+	    ifpfx->pinfo.vltime /* intentionally avoid deprecation */,
+	    ifpfx->pinfo.vltime));
 }

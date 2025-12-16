@@ -1008,30 +1008,30 @@ client6_send(struct dhcp6_event *ev)
 	switch(ev->state) {
 	case DHCP6S_SOLICIT:
 		dh6->dh6_msgtype = DH6_SOLICIT;
-		d_printf(LOG_INFO, FNAME, "Sending Solicit");
+		d_printf(LOG_INFO, FNAME, "Sending Solicit on %s", ifp->ifname);
 		break;
 	case DHCP6S_REQUEST:
 		dh6->dh6_msgtype = DH6_REQUEST;
-		d_printf(LOG_INFO, FNAME, "Sending Request");
+		d_printf(LOG_INFO, FNAME, "Sending Request on %s", ifp->ifname);
 		break;
 	case DHCP6S_RENEW:
 		dh6->dh6_msgtype = DH6_RENEW;
-		d_printf(LOG_INFO, FNAME, "Sending Renew");
+		d_printf(LOG_INFO, FNAME, "Sending Renew on %s", ifp->ifname);
 		break;
 	case DHCP6S_REBIND:
 		dh6->dh6_msgtype = DH6_REBIND;
-		d_printf(LOG_INFO, FNAME, "Sending Rebind");
+		d_printf(LOG_INFO, FNAME, "Sending Rebind on %s", ifp->ifname);
 		break;
 	case DHCP6S_RELEASE:
 		dh6->dh6_msgtype = DH6_RELEASE;
-		d_printf(LOG_INFO, FNAME, "Sending Release");
+		d_printf(LOG_INFO, FNAME, "Sending Release on %s", ifp->ifname);
 		break;
 	case DHCP6S_INFOREQ:
 		dh6->dh6_msgtype = DH6_INFORM_REQ;
-		d_printf(LOG_INFO, FNAME, "Sending Information Request");
+		d_printf(LOG_INFO, FNAME, "Sending Information Request on %s", ifp->ifname);
 		break;
 	default:
-		d_printf(LOG_ERR, FNAME, "unexpected state");
+		d_printf(LOG_ERR, FNAME, "Unexpected state '%d' on %s", ev->state, ifp->ifname);
 		exit(1);	/* XXX */
 	}
 

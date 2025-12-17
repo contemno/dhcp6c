@@ -506,5 +506,6 @@ pd_ifaddrconf(ifaddrconf_cmd_t cmd, struct dhcp6_ifprefix *ifpfx)
 	return (ifaddrconf(cmd, pconf->ifname, &ifpfx->ifaddr,
 	    ifpfx->pinfo.plen,
 	    ifpfx->pinfo.vltime /* intentionally avoid deprecation */,
-	    ifpfx->pinfo.vltime));
+#define ND6_GRACEPERIOD_LIFETIME 60
+	    ifpfx->pinfo.vltime + ND6_GRACEPERIOD_LIFETIME));
 }

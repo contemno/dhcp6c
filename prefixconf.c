@@ -127,10 +127,10 @@ update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
     struct iactl **ctlp, void (*callback)(struct ia *))
 {
 	struct iactl_pd *iac_pd = (struct iactl_pd *)*ctlp;
-	struct siteprefix *sp;
 	struct prefix_ifconf *pif;
-	int spcreate = 0;
+	struct siteprefix *sp;
 	struct timeval timo;
+	int spcreate = 0;
 
 	/*
 	 * A client discards any addresses for which the preferred
@@ -197,7 +197,7 @@ update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
 	    pinfo->pltime, pinfo->vltime);
 
 	/* update prefix interfaces if necessary */
-	if (sp->prefix.vltime != 0 && spcreate) {
+	if (sp->prefix.vltime != 0) {
 		for (pif = TAILQ_FIRST(iac_pd->pifc_head); pif;
 		    pif = TAILQ_NEXT(pif, link)) {
 			add_ifprefix(sp, pinfo, pif);

@@ -195,6 +195,7 @@ struct dhcp6_optinfo {
 	struct dhcp6_list nispname_list; /* NIS+ domain list */
 	struct dhcp6_list bcmcs_list; /* BCMC server list */
 	struct dhcp6_list bcmcsname_list; /* BCMC domain list */
+	struct dhcp6_list aftrname_list; /* AFTR name */
 	struct rawop_list rawops; /* Raw option list */
 
 	struct dhcp6_vbuf relay_msg; /* relay message */
@@ -308,6 +309,7 @@ struct dhcp6_relay {
 #define DH6OPT_REMOTE_ID 37
 #define DH6OPT_SUBSCRIBER_ID 38
 #define DH6OPT_CLIENT_FQDN 39
+#define DH6OPT_AFTR_NAME 64
 
 /* The followings are KAME specific. */
 

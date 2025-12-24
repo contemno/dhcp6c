@@ -1351,6 +1351,7 @@ dhcp6_init_options(struct dhcp6_optinfo *optinfo)
 	TAILQ_INIT(&optinfo->nispname_list);
 	TAILQ_INIT(&optinfo->bcmcs_list);
 	TAILQ_INIT(&optinfo->bcmcsname_list);
+	TAILQ_INIT(&optinfo->aftrname_list);
 	TAILQ_INIT(&optinfo->rawops);
 
 	optinfo->authproto = DHCP6_AUTHPROTO_UNDEF;
@@ -1388,6 +1389,7 @@ dhcp6_clear_options(struct dhcp6_optinfo *optinfo)
 	dhcp6_clear_list(&optinfo->nispname_list);
 	dhcp6_clear_list(&optinfo->bcmcs_list);
 	dhcp6_clear_list(&optinfo->bcmcsname_list);
+	dhcp6_clear_list(&optinfo->aftrname_list);
 
 	if (optinfo->relaymsg_msg != NULL)
 		free(optinfo->relaymsg_msg);
@@ -1440,6 +1442,8 @@ dhcp6_copy_options(struct dhcp6_optinfo *dst, struct dhcp6_optinfo *src)
 	if (dhcp6_copy_list(&dst->bcmcs_list, &src->bcmcs_list))
 		goto fail;
 	if (dhcp6_copy_list(&dst->bcmcsname_list, &src->bcmcsname_list))
+		goto fail;
+	if (dhcp6_copy_list(&dst->aftrname_list, &src->aftrname_list))
 		goto fail;
 	dst->elapsed_time = src->elapsed_time;
 	dst->refreshtime = src->refreshtime;
@@ -1805,6 +1809,11 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 			    &optinfo->ntp_list) == -1)
 				goto fail;
 			break;
+		case DH6OPT_AFTR_NAME:
+			if (optlen <= 3 || dhcp6_get_addr(optlen, cp, opt,
+			    &optinfo->aftrname_list) == -1)
+				goto fail;
+			break;
 		case DH6OPT_IA_PD:
 			if (optlen + sizeof(struct dhcp6opt) <
 			    sizeof(optia))
@@ -1905,9 +1914,7 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 				goto fail;
 			}
 			dhcp6_clear_list(&sublist);
-
 			break;
-
 		default:
 			/* no option specific behavior */
 			d_printf(LOG_INFO, FNAME,
@@ -2434,6 +2441,10 @@ dhcp6_set_options(int type, struct dhcp6opt *optbp,
 		goto fail;
 
 	if (dhcp6_set_addr(DH6OPT_BCMCS_SERVER_A, &optinfo->bcmcs_list,
+	    &p, optep, &len) != 0)
+		goto fail;
+
+	if (dhcp6_set_domain(DH6OPT_AFTR_NAME, &optinfo->aftrname_list,
 	    &p, optep, &len) != 0)
 		goto fail;
 
@@ -3076,6 +3087,8 @@ dhcp6optstr(int type)
 		return ("subscriber ID");
 	case DH6OPT_CLIENT_FQDN:
 		return ("client FQDN");
+	case DH6OPT_AFTR_NAME:
+		return ("AFTR-Name");
 /*	Either a known or an unknown option. RAW is a syntax, not an option
 	case DHCPOPT_RAW:
 		return ("raw");

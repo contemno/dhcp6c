@@ -72,6 +72,7 @@ static char nispserver_str[] = "new_nisp_servers";
 static char nispname_str[] = "new_nisp_name";
 static char bcmcsserver_str[] = "new_bcmcs_servers";
 static char bcmcsname_str[] = "new_bcmcs_name";
+static char aftrname_str[] = "new_aftr_name";
 static char raw_dhcp_option_str[] = "raw_dhcp_option";
 
 int client6_script(char *, int, struct dhcp6_optinfo *);
@@ -84,7 +85,7 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	int nisservers, nisnamelen;
 	int nispservers, nispnamelen;
 	int bcmcsservers, bcmcsnamelen;
-	int prefixes;
+	int aftrnamelen, prefixes;
 	char **envp, *s;
 	char reason[32];
 	char prefixinfo[32] = "\0";
@@ -113,6 +114,7 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	nispnamelen = 0;
 	bcmcsservers = 0;
 	bcmcsnamelen = 0;
+	aftrnamelen = 0;
 	prefixes = 0;
 	envc = 2;     /* we at least include the reason and the terminator */
 	if (state == DHCP6S_EXIT)
@@ -165,6 +167,12 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 		bcmcsnamelen += v->val_vbuf.dv_len;
 	}
 	envc += bcmcsnamelen ? 1 : 0;
+
+	for (v = TAILQ_FIRST(&optinfo->aftrname_list); v;
+	    v = TAILQ_NEXT(v, link)) {
+		aftrnamelen += v->val_vbuf.dv_len;
+	}
+	envc += aftrnamelen ? 1 : 0;
 
 	for (iav = TAILQ_FIRST(&optinfo->iapd_list); iav; iav = TAILQ_NEXT(iav, link)) {
 		for (siav = TAILQ_FIRST(&iav->sublist); siav; siav = TAILQ_NEXT(siav, link)) {
@@ -401,6 +409,22 @@ setenv:
 		memset(s, 0, elen);
 		snprintf(s, elen, "%s=", bcmcsname_str);
 		for (v = TAILQ_FIRST(&optinfo->bcmcsname_list); v;
+		    v = TAILQ_NEXT(v, link)) {
+			strlcat(s, v->val_vbuf.dv_buf, elen);
+			strlcat(s, " ", elen);
+		}
+	}
+	if (aftrnamelen) {
+		elen = sizeof (aftrname_str) + aftrnamelen + 1;
+		if ((s = envp[i++] = malloc(elen)) == NULL) {
+			d_printf(LOG_NOTICE, FNAME,
+			    "failed to allocate strings for AFTR-Name");
+			ret = -1;
+			goto clean;
+		}
+		memset(s, 0, elen);
+		snprintf(s, elen, "%s=", aftrname_str);
+		for (v = TAILQ_FIRST(&optinfo->aftrname_list); v;
 		    v = TAILQ_NEXT(v, link)) {
 			strlcat(s, v->val_vbuf.dv_buf, elen);
 			strlcat(s, " ", elen);

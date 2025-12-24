@@ -1734,6 +1734,17 @@ client6_recvreply(struct dhcp6_if *ifp, struct dhcp6 *dh6,
 		}
 	}
 
+	if (!TAILQ_EMPTY(&optinfo->aftrname_list)) {
+		struct dhcp6_listval *d;
+		int i = 0;
+
+		for (d = TAILQ_FIRST(&optinfo->aftrname_list); d;
+		     d = TAILQ_NEXT(d, link), i++) {
+			info_printf("AFTR domain name[%d] %s",
+			    i, in6addr2str(&d->val_addr6, 0));
+		}
+	}
+
 	/*
 	 * Set refresh timer for configuration information specified in
 	 * information-request.  If the timer value is specified by the server

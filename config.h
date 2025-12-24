@@ -85,10 +85,10 @@ struct dhcp6_if {
 
 	/* XXX */
 	struct duid duid;
-	struct rawop_list rawops;
 
 	struct dhcp6_list reqopt_list;
 	struct ia_conflist iaconf_list;
+	struct rawop_list rawopt_list;
 
 	/* authentication information */
 	int authproto;		/* protocol */

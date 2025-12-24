@@ -1155,7 +1155,7 @@ client6_send(struct dhcp6_event *ev)
 		goto end;
 	}
 
-	rawop_copy_list(&optinfo.rawops, &ifp->rawops);
+	rawop_copy_list(&optinfo.rawopt_list, &ifp->rawopt_list);
 
 	/* set options in the message */
 	if ((optlen = dhcp6_set_options(dh6->dh6_msgtype,

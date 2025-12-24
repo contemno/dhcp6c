@@ -108,10 +108,10 @@ struct dhcp6_ifconf {
 	char *scriptpath;	/* path to config script (client only) */
 
 	struct duid duid;
-	struct rawop_list rawops;
 
 	struct dhcp6_list reqopt_list;
 	struct ia_conflist iaconf_list;
+	struct rawop_list rawopt_list;
 
 	struct authinfo *authinfo; /* authentication information
 				    * (no need to clear) */
@@ -244,7 +244,7 @@ configure_interface(struct cf_namelist *iflist)
 		ifc->server_pref = DH6OPT_PREF_UNDEF;
 		TAILQ_INIT(&ifc->reqopt_list);
 		TAILQ_INIT(&ifc->iaconf_list);
-		TAILQ_INIT(&ifc->rawops);
+		TAILQ_INIT(&ifc->rawopt_list);
 
 		for (cfl = ifp->params; cfl; cfl = cfl->next) {
 			switch(cfl->type) {
@@ -1437,7 +1437,7 @@ configure_commit(void)
 		ifp->send_flags = 0;
 		ifp->allow_flags = 0;
 		dhcp6_clear_list(&ifp->reqopt_list);
-		rawop_clear_list(&ifp->rawops);
+		rawop_clear_list(&ifp->rawopt_list);
 		clear_iaconf(&ifp->iaconf_list);
 
 		ifp->server_pref = DH6OPT_PREF_UNDEF;
@@ -1459,7 +1459,7 @@ configure_commit(void)
 		ifp->send_flags = ifc->send_flags;
 		ifp->allow_flags = ifc->allow_flags;
 		dhcp6_copy_list(&ifp->reqopt_list, &ifc->reqopt_list);
-		rawop_copy_list(&ifp->rawops, &ifc->rawops);
+		rawop_copy_list(&ifp->rawopt_list, &ifc->rawopt_list);
 		while ((iac = TAILQ_FIRST(&ifc->iaconf_list)) != NULL) {
 			TAILQ_REMOVE(&ifc->iaconf_list, iac, link);
 			TAILQ_INSERT_TAIL(&ifp->iaconf_list,
@@ -1572,7 +1572,7 @@ clear_ifconf(struct dhcp6_ifconf *iflist)
 
 		free(ifc->ifname);
 		dhcp6_clear_list(&ifc->reqopt_list);
-		rawop_clear_list(&ifc->rawops);
+		rawop_clear_list(&ifc->rawopt_list);
 
 		clear_iaconf(&ifc->iaconf_list);
 
@@ -1796,7 +1796,7 @@ add_options(int opcode, struct dhcp6_ifconf *ifc, struct cf_list *cfl0)
 			}
 			memcpy(newop->data, op->data, newop->datalen);
 
-			TAILQ_INSERT_TAIL(&ifc->rawops, newop, link);
+			TAILQ_INSERT_TAIL(&ifc->rawopt_list, newop, link);
 			break;
 
 		case DHCPOPT_SIP:

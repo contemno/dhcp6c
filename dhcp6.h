@@ -196,7 +196,7 @@ struct dhcp6_optinfo {
 	struct dhcp6_list bcmcs_list; /* BCMC server list */
 	struct dhcp6_list bcmcsname_list; /* BCMC domain list */
 	struct dhcp6_list aftrname_list; /* AFTR name */
-	struct rawop_list rawops; /* Raw option list */
+	struct rawop_list rawopt_list; /* Raw option list */
 
 	struct dhcp6_vbuf relay_msg; /* relay message */
 #define relaymsg_len relay_msg.dv_len

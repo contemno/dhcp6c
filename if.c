@@ -79,7 +79,7 @@ ifinit(char *ifname)
 
 	TAILQ_INIT(&ifp->reqopt_list);
 	TAILQ_INIT(&ifp->iaconf_list);
-	TAILQ_INIT(&ifp->rawops);
+	TAILQ_INIT(&ifp->rawopt_list);
 
 	ifp->authproto = DHCP6_AUTHPROTO_UNDEF;
 	ifp->authalgorithm = DHCP6_AUTHALG_UNDEF;

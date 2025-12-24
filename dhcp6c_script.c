@@ -460,7 +460,7 @@ setenv:
 	}
 
 	/* XXX */
-	for (rawop = TAILQ_FIRST(&optinfo->rawops); rawop; rawop = TAILQ_NEXT(rawop, link)) {
+	for (rawop = TAILQ_FIRST(&optinfo->rawopt_list); rawop; rawop = TAILQ_NEXT(rawop, link)) {
 		// max of 5 numbers after last underscore (seems like max DHCPv6 option could be 65535)
 		elen = sizeof(raw_dhcp_option_str) + 1 /* underscore */ + 1 /* equals sign */ + 5;
 		elen += rawop->datalen * 2;

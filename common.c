@@ -121,8 +121,6 @@ rawop_count_list(struct rawop_list *head)
 	struct rawoption *op;
 	int i;
 
-	//d_printf(LOG_INFO, FNAME, "counting list at %p", (void*)head);
-
 	for (i = 0, op = TAILQ_FIRST(head); op; op = TAILQ_NEXT(op, link)) {
 		i++;
 	}
@@ -135,18 +133,13 @@ rawop_clear_list(struct rawop_list *head)
 {
 	struct rawoption *op;
 
-	//d_printf(LOG_INFO, FNAME, "clearing %d rawops at %p", rawop_count_list(head), (void*)head);
-
 	while ((op = TAILQ_FIRST(head)) != NULL) {
-
-		//d_printf(LOG_INFO, FNAME, "  current op: %p link: %p", (void*)op, op->link);
 		TAILQ_REMOVE(head, op, link);
 
 		if (op->data != NULL) {
-			d_printf(LOG_INFO, FNAME, "    freeing op data at %p", (void*)op->data);
 			free(op->data);
 		}
-		free(op);	// Needed? yes
+		free(op);
 	}
 	return;
 }
@@ -155,12 +148,6 @@ int
 rawop_copy_list(struct rawop_list *dst, struct rawop_list *src)
 {
 	struct rawoption *op, *newop;
-
-	/*
-	d_printf(LOG_INFO, FNAME,
-		"  copying rawop list %p to %p (%d ops)",
-		(void*)src, (void*)dst, rawop_count_list(src));
-	*/
 
 	for (op = TAILQ_FIRST(src); op; op = TAILQ_NEXT(op, link)) {
 		newop = NULL;
@@ -182,7 +169,6 @@ rawop_copy_list(struct rawop_list *dst, struct rawop_list *src)
 			goto fail;
 		}
 		memcpy(newop->data, op->data, newop->datalen);
-		//d_printf(LOG_INFO, FNAME, "    copied %d bytes of data at %p", newop->datalen, (void*)newop->data);
 
 		TAILQ_INSERT_TAIL(dst, newop, link);
 	}
@@ -197,11 +183,7 @@ void
 rawop_move_list(struct rawop_list *dst, struct rawop_list *src)
 {
 	struct rawoption *op;
-	/*
-	d_printf(LOG_INFO, FNAME,
-		"  moving rawop list of %d from %p to %p",
-		rawop_count_list(src), (void*)src, (void*)dst);
-	*/
+
 	while ((op = TAILQ_FIRST(src)) != NULL) {
 		TAILQ_REMOVE(src, op, link);
 		TAILQ_INSERT_TAIL(dst, op, link);
@@ -1352,7 +1334,7 @@ dhcp6_init_options(struct dhcp6_optinfo *optinfo)
 	TAILQ_INIT(&optinfo->bcmcs_list);
 	TAILQ_INIT(&optinfo->bcmcsname_list);
 	TAILQ_INIT(&optinfo->aftrname_list);
-	TAILQ_INIT(&optinfo->rawops);
+	TAILQ_INIT(&optinfo->rawopt_list);
 
 	optinfo->authproto = DHCP6_AUTHPROTO_UNDEF;
 	optinfo->authalgorithm = DHCP6_AUTHALG_UNDEF;
@@ -1397,7 +1379,7 @@ dhcp6_clear_options(struct dhcp6_optinfo *optinfo)
 	if (optinfo->ifidopt_id != NULL)
 		free(optinfo->ifidopt_id);
 
-	rawop_clear_list(&optinfo->rawops);
+	rawop_clear_list(&optinfo->rawopt_list);
 
 	dhcp6_init_options(optinfo);
 }
@@ -1449,7 +1431,7 @@ dhcp6_copy_options(struct dhcp6_optinfo *dst, struct dhcp6_optinfo *src)
 	dst->refreshtime = src->refreshtime;
 	dst->pref = src->pref;
 
-	rawop_copy_list(&dst->rawops, &src->rawops);
+	rawop_copy_list(&dst->rawopt_list, &src->rawopt_list);
 
 	if (src->relaymsg_msg != NULL) {
 		if ((dst->relaymsg_msg = malloc(src->relaymsg_len)) == NULL)
@@ -1936,7 +1918,7 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 			}
 			memcpy(rawop->data, cp, rawop->datalen);
 
-			TAILQ_INSERT_TAIL(&optinfo->rawops, rawop, link);
+			TAILQ_INSERT_TAIL(&optinfo->rawopt_list, rawop, link);
 
 			break;
 		}
@@ -2519,7 +2501,7 @@ dhcp6_set_options(int type, struct dhcp6opt *optbp,
 		}
 	}
 
-	for (rawop = TAILQ_FIRST(&optinfo->rawops); rawop;
+	for (rawop = TAILQ_FIRST(&optinfo->rawopt_list); rawop;
 	    rawop = TAILQ_NEXT(rawop, link)) {
 
 		d_printf(LOG_DEBUG, FNAME,

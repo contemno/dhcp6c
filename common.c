@@ -1,6 +1,7 @@
 /*	$KAME: common.c,v 1.129 2005/09/16 11:30:13 suz Exp $	*/
 /*
  * Copyright (C) 1998 and 1999 WIDE Project.
+ * Copyright (C) 2024 Franco Fichtner <franco@opnsense.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

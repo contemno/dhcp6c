@@ -2,6 +2,7 @@
 
 /*
  * Copyright (C) 2002 WIDE Project.
+ * Copyright (C) 2024 Franco Fichtner <franco@opnsense.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

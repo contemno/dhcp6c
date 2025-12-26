@@ -117,8 +117,6 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 	} \
 } while (0)
 
-int client6_script(char *, int, struct dhcp6_optinfo *);
-
 int
 client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 {

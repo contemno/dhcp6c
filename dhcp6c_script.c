@@ -61,28 +61,44 @@
 #include "dhcp6c.h"
 #include "common.h"
 
-static char sipserver_str[] = "new_sip_servers";
 static char sipname_str[] = "new_sip_name";
-static char dnsserver_str[] = "new_domain_name_servers";
 static char dnsname_str[] = "new_domain_name";
-static char ntpserver_str[] = "new_ntp_servers";
-static char nisserver_str[] = "new_nis_servers";
 static char nisname_str[] = "new_nis_name";
-static char nispserver_str[] = "new_nisp_servers";
 static char nispname_str[] = "new_nisp_name";
-static char bcmcsserver_str[] = "new_bcmcs_servers";
 static char bcmcsname_str[] = "new_bcmcs_name";
 static char aftrname_str[] = "new_aftr_name";
 static char raw_dhcp_option_str[] = "raw_dhcp_option";
 
 #define DECLARE_LIST(lname)	int lname##_len = 0;
 
-# define COUNT_LIST(lname)	do { \
+#define COUNT_LIST(lname)	do { \
 	lname##_len = 0; \
 	for (v = TAILQ_FIRST(&optinfo->lname##_list); v; \
 	    v = TAILQ_NEXT(v, link)) \
 		lname##_len++; \
 	envc += lname##_len ? 1 : 0; \
+} while (0)
+
+#define ADDR_LIST(lname, str)	do { \
+	if (lname##_len) { \
+		/* "var=addr1 addr2 ... addrN" + null char for termination */ \
+		int slen = sizeof(str) + 2 + (INET6_ADDRSTRLEN + 1) * lname##_len; \
+		char *sptr; \
+		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
+			d_printf(LOG_NOTICE, FNAME, \
+			    "failed to allocate strings for %s", str); \
+			ret = -1; \
+			goto clean; \
+		} \
+		memset(sptr, 0, slen); \
+		snprintf(sptr, slen, "%s=", str); \
+		for (v = TAILQ_FIRST(&optinfo->lname##_list); v; \
+		    v = TAILQ_NEXT(v, link)) { \
+			char *addr = in6addr2str(&v->val_addr6, 0); \
+			strlcat(sptr, addr, slen); \
+			strlcat(sptr, " ", slen); \
+		} \
+	} \
 } while (0)
 
 int client6_script(char *, int, struct dhcp6_optinfo *);
@@ -174,48 +190,12 @@ setenv:
 	if (state == DHCP6S_EXIT)
 		goto launch;
 
-	/* "var=addr1 addr2 ... addrN" + null char for termination */
-	if (dns_len) {
-		elen = sizeof(dnsserver_str) +
-		    (INET6_ADDRSTRLEN + 1) * dns_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for DNS servers");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", dnsserver_str);
-		for (v = TAILQ_FIRST(&optinfo->dns_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			char *addr;
-
-			addr = in6addr2str(&v->val_addr6, 0);
-			strlcat(s, addr, elen);
-			strlcat(s, " ", elen);
-		}
-	}
-
-	if (ntp_len) {
-		elen = sizeof (ntpserver_str) +
-		    (INET6_ADDRSTRLEN + 1) * ntp_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for NTP servers");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", ntpserver_str);
-		for (v = TAILQ_FIRST(&optinfo->ntp_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			char *addr;
-
-			addr = in6addr2str(&v->val_addr6, 0);
-			strlcat(s, addr, elen);
-			strlcat(s, " ", elen);
-		}
-	}
+	ADDR_LIST(dns, "new_domain_name_servers");
+	ADDR_LIST(ntp, "new_ntp_servers");
+	ADDR_LIST(sip, "new_sip_servers");
+	ADDR_LIST(nis, "new_nis_servers");
+	ADDR_LIST(nisp, "new_nisp_servers");
+	ADDR_LIST(bcmcs, "new_bcmcs_servers");
 
 	if (dnsname_len) {
 		elen = sizeof(dnsname_str) + dnsname_len + 1;
@@ -230,27 +210,6 @@ setenv:
 		for (v = TAILQ_FIRST(&optinfo->dnsname_list); v;
 		    v = TAILQ_NEXT(v, link)) {
 			strlcat(s, v->val_vbuf.dv_buf, elen);
-			strlcat(s, " ", elen);
-		}
-	}
-
-	if (sip_len) {
-		elen = sizeof(sipserver_str) +
-		    (INET6_ADDRSTRLEN + 1) * sip_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for SIP servers");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", sipserver_str);
-		for (v = TAILQ_FIRST(&optinfo->sip_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			char *addr;
-
-			addr = in6addr2str(&v->val_addr6, 0);
-			strlcat(s, addr, elen);
 			strlcat(s, " ", elen);
 		}
 	}
@@ -272,27 +231,6 @@ setenv:
 		}
 	}
 
-	if (nis_len) {
-		elen = sizeof(nisserver_str) +
-		    (INET6_ADDRSTRLEN + 1) * nis_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for NIS servers");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", nisserver_str);
-		for (v = TAILQ_FIRST(&optinfo->nis_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			char *addr;
-
-			addr = in6addr2str(&v->val_addr6, 0);
-			strlcat(s, addr, elen);
-			strlcat(s, " ", elen);
-		}
-	}
-
 	if (nisname_len) {
 		elen = sizeof (nisname_str) + nisname_len + 1;
 		if ((s = envp[i++] = malloc(elen)) == NULL) {
@@ -310,26 +248,6 @@ setenv:
 		}
 	}
 
-	if (nisp_len) {
-		elen = sizeof(nispserver_str) +
-		    (INET6_ADDRSTRLEN + 1) * nisp_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for NIS+ servers");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", nispserver_str);
-		for (v = TAILQ_FIRST(&optinfo->nisp_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			char *addr;
-
-			addr = in6addr2str(&v->val_addr6, 0);
-			strlcat(s, addr, elen);
-			strlcat(s, " ", elen);
-		}
-	}
 	if (nispname_len) {
 		elen = sizeof(nispname_str) + nispname_len + 1;
 		if ((s = envp[i++] = malloc(elen)) == NULL) {
@@ -347,26 +265,6 @@ setenv:
 		}
 	}
 
-	if (bcmcs_len) {
-		elen = sizeof(bcmcsserver_str) +
-		    (INET6_ADDRSTRLEN + 1) * bcmcs_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for BCMC servers");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", bcmcsserver_str);
-		for (v = TAILQ_FIRST(&optinfo->bcmcs_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			char *addr;
-
-			addr = in6addr2str(&v->val_addr6, 0);
-			strlcat(s, addr, elen);
-			strlcat(s, " ", elen);
-		}
-	}
 	if (bcmcsname_len) {
 		elen = sizeof(bcmcsname_str) + bcmcsname_len + 1;
 		if ((s = envp[i++] = malloc(elen)) == NULL) {
@@ -383,6 +281,7 @@ setenv:
 			strlcat(s, " ", elen);
 		}
 	}
+
 	if (aftrname_len) {
 		elen = sizeof(aftrname_str) + aftrname_len + 1;
 		if ((s = envp[i++] = malloc(elen)) == NULL) {

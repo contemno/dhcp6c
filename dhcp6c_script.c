@@ -61,12 +61,6 @@
 #include "dhcp6c.h"
 #include "common.h"
 
-static char sipname_str[] = "new_sip_name";
-static char dnsname_str[] = "new_domain_name";
-static char nisname_str[] = "new_nis_name";
-static char nispname_str[] = "new_nisp_name";
-static char bcmcsname_str[] = "new_bcmcs_name";
-static char aftrname_str[] = "new_aftr_name";
 static char raw_dhcp_option_str[] = "raw_dhcp_option";
 
 #define DECLARE_LIST(lname)	int lname##_len = 0;
@@ -79,24 +73,44 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 	envc += lname##_len ? 1 : 0; \
 } while (0)
 
-#define ADDR_LIST(lname, str)	do { \
+#define ADDR_LIST(lname, lstr)	do { \
 	if (lname##_len) { \
 		/* "var=addr1 addr2 ... addrN" + null char for termination */ \
-		int slen = sizeof(str) + 2 + (INET6_ADDRSTRLEN + 1) * lname##_len; \
+		int slen = sizeof(lstr) + 2 + (INET6_ADDRSTRLEN + 1) * lname##_len; \
 		char *sptr; \
 		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
 			d_printf(LOG_NOTICE, FNAME, \
-			    "failed to allocate strings for %s", str); \
+			    "failed to allocate strings for %s", lstr); \
 			ret = -1; \
 			goto clean; \
 		} \
 		memset(sptr, 0, slen); \
-		snprintf(sptr, slen, "%s=", str); \
+		snprintf(sptr, slen, "%s=", lstr); \
 		for (v = TAILQ_FIRST(&optinfo->lname##_list); v; \
 		    v = TAILQ_NEXT(v, link)) { \
 			char *addr = in6addr2str(&v->val_addr6, 0); \
 			strlcat(sptr, addr, slen); \
 			strlcat(sptr, " ", slen); \
+		} \
+	} \
+} while (0)
+
+#define NAME_LIST(lname, lstr)	do { \
+	if (lname##_len) { \
+		int slen = sizeof(lstr) + 2 + lname##_len; \
+		char *sptr; \
+		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
+			d_printf(LOG_NOTICE, FNAME, \
+			    "failed to allocate strings for %s", lstr); \
+			ret = -1; \
+			goto clean; \
+		} \
+		memset(s, 0, slen); \
+		snprintf(s, slen, "%s=", lstr); \
+		for (v = TAILQ_FIRST(&optinfo->dnsname_list); v; \
+		    v = TAILQ_NEXT(v, link)) { \
+			strlcat(s, v->val_vbuf.dv_buf, slen); \
+			strlcat(s, " ", slen); \
 		} \
 	} \
 } while (0)
@@ -191,113 +205,17 @@ setenv:
 		goto launch;
 
 	ADDR_LIST(dns, "new_domain_name_servers");
+	NAME_LIST(dnsname, "new_domain_name");
 	ADDR_LIST(ntp, "new_ntp_servers");
 	ADDR_LIST(sip, "new_sip_servers");
+	NAME_LIST(sipname, "new_sip_name");
 	ADDR_LIST(nis, "new_nis_servers");
+	NAME_LIST(nisname, "new_nis_name");
 	ADDR_LIST(nisp, "new_nisp_servers");
+	NAME_LIST(nispname, "new_nisp_name");
 	ADDR_LIST(bcmcs, "new_bcmcs_servers");
-
-	if (dnsname_len) {
-		elen = sizeof(dnsname_str) + dnsname_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for DNS name");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", dnsname_str);
-		for (v = TAILQ_FIRST(&optinfo->dnsname_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			strlcat(s, v->val_vbuf.dv_buf, elen);
-			strlcat(s, " ", elen);
-		}
-	}
-
-	if (sipname_len) {
-		elen = sizeof(sipname_str) + sipname_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for SIP domain name");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", sipname_str);
-		for (v = TAILQ_FIRST(&optinfo->sipname_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			strlcat(s, v->val_vbuf.dv_buf, elen);
-			strlcat(s, " ", elen);
-		}
-	}
-
-	if (nisname_len) {
-		elen = sizeof (nisname_str) + nisname_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for NIS domain name");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", nisname_str);
-		for (v = TAILQ_FIRST(&optinfo->nisname_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			strlcat(s, v->val_vbuf.dv_buf, elen);
-			strlcat(s, " ", elen);
-		}
-	}
-
-	if (nispname_len) {
-		elen = sizeof(nispname_str) + nispname_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for NIS+ domain name");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", nispname_str);
-		for (v = TAILQ_FIRST(&optinfo->nispname_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			strlcat(s, v->val_vbuf.dv_buf, elen);
-			strlcat(s, " ", elen);
-		}
-	}
-
-	if (bcmcsname_len) {
-		elen = sizeof(bcmcsname_str) + bcmcsname_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for BCMC domain name");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", bcmcsname_str);
-		for (v = TAILQ_FIRST(&optinfo->bcmcsname_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			strlcat(s, v->val_vbuf.dv_buf, elen);
-			strlcat(s, " ", elen);
-		}
-	}
-
-	if (aftrname_len) {
-		elen = sizeof(aftrname_str) + aftrname_len + 1;
-		if ((s = envp[i++] = malloc(elen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate strings for AFTR-Name");
-			ret = -1;
-			goto clean;
-		}
-		memset(s, 0, elen);
-		snprintf(s, elen, "%s=", aftrname_str);
-		for (v = TAILQ_FIRST(&optinfo->aftrname_list); v;
-		    v = TAILQ_NEXT(v, link)) {
-			strlcat(s, v->val_vbuf.dv_buf, elen);
-			strlcat(s, " ", elen);
-		}
-	}
+	NAME_LIST(bcmcsname, "new_bcmcs_name");
+	NAME_LIST(aftrname, "new_aftr_name");
 
 	if (prefixes) {
 #define PDINFO_MAX	64
@@ -352,6 +270,7 @@ setenv:
 		}
 		free(val);
 	}
+
 launch:
 	/* launch the script */
 	pid = fork();

@@ -109,7 +109,7 @@ depend:
 
 package:
 	tar -zcvf wide-dhcpv6.tar.gz $(srcdir)/*.[chyl1-8] $(srcdir)/Makefile.in \
-		$(srcdir)/README $(srcdir)/COPYRIGHT $(srcdir)/CHANGES \
+		$(srcdir)/README $(srcdir)/COPYRIGHT \
 		$(srcdir)/configure $(srcdir)/configure.in \
 		$(srcdir)/install-sh  $(srcdir)/*.sample \
 		$(srcdir)/missing/strlcpy.c $(srcdir)/missing/daemon.c \

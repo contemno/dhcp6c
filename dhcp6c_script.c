@@ -64,9 +64,24 @@
 
 static char raw_dhcp_option_str[] = "raw_dhcp_option";
 
-#define DECLARE_LIST(lname)	int lname##_len = 0;
+#define DECLARE_LEN(lname)	int lname##_len = 0;
+
+#define RENDER_REASON()		do { \
+	struct dhcp6_event ev; \
+	char reason[32]; \
+	ev.state = state; \
+	snprintf(reason, sizeof(reason), "REASON=%s", \
+	    dhcp6_event_statestr(&ev)); \
+	if ((envp[i++] = strdup(reason)) == NULL) { \
+		d_printf(LOG_NOTICE, FNAME, \
+		    "failed to allocate reason strings"); \
+		ret = -1; \
+		goto clean; \
+	} \
+} while (0)
 
 #define COUNT_LIST(lname, lip)	do { \
+	struct dhcp6_listval *v; \
 	for (v = TAILQ_FIRST(&optinfo->lname##_list); v; \
 	    v = TAILQ_NEXT(v, link)) { \
 		/* one space separator plus address length or as is */ \
@@ -79,6 +94,7 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 	if (lname##_len) { \
 		/* "var=" + null char for termination */ \
 		int slen = sizeof(lstr) + 2 + lname##_len; \
+		struct dhcp6_listval *v; \
 		char *sptr; \
 		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
 			d_printf(LOG_NOTICE, FNAME, \
@@ -97,32 +113,120 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 	} \
 } while (0)
 
+#define PDINFO_MAX	64
+
+#define COUNT_PREFIX()	do { \
+	struct dhcp6_listval *iav, *siav; \
+	for (iav = TAILQ_FIRST(&optinfo->iapd_list); iav; \
+	    iav = TAILQ_NEXT(iav, link)) { \
+		for (siav = TAILQ_FIRST(&iav->sublist); siav; \
+		    siav = TAILQ_NEXT(siav, link)) { \
+			if (siav->type == DHCP6_LISTVAL_PREFIX6) { \
+				/* one space separator plus prefix length max */ \
+				prefixes_len += 1 + PDINFO_MAX; \
+			} \
+		} \
+	} \
+	envc += prefixes_len ? 1 : 0; \
+} while (0)
+
+#define RENDER_PREFIX()	do { \
+	if (prefixes_len) { \
+		struct dhcp6_listval *iav, *siav; \
+		char prefixinfo[PDINFO_MAX]; \
+		char *str = "PDINFO"; \
+		char *sptr; \
+		int slen = sizeof(str) + 2 + prefixes_len; \
+		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
+			d_printf(LOG_NOTICE, FNAME, \
+			    "failed to allocate prefixinfo strings"); \
+			ret = -1; \
+			goto clean; \
+		} \
+		memset(sptr, 0, slen); \
+		snprintf(sptr, slen, "%s=", str); \
+		for (iav = TAILQ_FIRST(&optinfo->iapd_list); iav; \
+		    iav = TAILQ_NEXT(iav, link)) { \
+			for (siav = TAILQ_FIRST(&iav->sublist); siav; \
+			    siav = TAILQ_NEXT(siav, link)) { \
+				if (siav->type == DHCP6_LISTVAL_PREFIX6) { \
+					snprintf(prefixinfo, sizeof(prefixinfo), \
+					    "%s/%d", in6addr2str(&siav->val_prefix6.addr, 0), \
+					    siav->val_prefix6.plen); \
+					strlcat(sptr, prefixinfo, slen); \
+					strlcat(sptr, " ", slen); \
+				} \
+			} \
+		} \
+	} \
+} while (0)
+
+#define COUNT_RAWOPT()	do { \
+	struct rawoption *rawopt; \
+	for (rawopt = TAILQ_FIRST(&optinfo->rawopt_list); rawopt; \
+	    rawopt = TAILQ_NEXT(rawopt, link)) { \
+		rawopts_len += 1; \
+	} \
+	envc += rawopts_len; \
+} while (0)
+
+#define RENDER_RAWOPT()	do { \
+	if (rawopts_len) { \
+		const char *hex = "0123456789abcdef"; \
+		struct rawoption *rawopt; \
+		char val[3]; \
+		for (rawopt = TAILQ_FIRST(&optinfo->rawopt_list); rawopt; \
+		    rawopt = TAILQ_NEXT(rawopt, link)) { \
+			/* \
+			 * max of 5 numbers after last underscore \
+			 * (seems like max DHCPv6 option could be 65535) \
+			 * then underscore and equal sign plus hex signs \
+			 * of each byte \
+			 */ \
+			int slen = sizeof(raw_dhcp_option_str) + 5 + 2 + \
+			    rawopt->datalen * 2; \
+			char *sptr; \
+			if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
+				d_printf(LOG_NOTICE, FNAME, \
+				    "failed to allocate string for DHCPv6 option %d", \
+				    rawopt->opnum); \
+				ret = -1; \
+				goto clean; \
+			} \
+			/* make raw options available as raw_dhcp_option_xyz=hexresponse */ \
+			snprintf(sptr, slen, "%s_%d=", raw_dhcp_option_str, rawopt->opnum); \
+			for (int o = 0; o < rawopt->datalen; o++) { \
+				val[0] = hex[(rawopt->data[o]>>4) & 0x0F]; \
+				val[1] = hex[(rawopt->data[o]   ) & 0x0F]; \
+				val[2] = 0x00; \
+				strlcat(sptr, val, slen); \
+			} \
+		} \
+	} \
+} while (0)
+
 int
 client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 {
-	int i, ret = 0;
 	int envc = 2;	/* we at least include the reason and the terminator */
-	int prefixes = 0, rawopts = 0;
+	int i, ret = 0;
 	char **envp;
-	char reason[32];
-	char prefixinfo[32] = "\0";
-	struct rawoption *rawopt;
-	struct dhcp6_listval *v;
 	pid_t pid, wpid;
-	struct dhcp6_listval *iav, *siav;
 
-	DECLARE_LIST(dns);
-	DECLARE_LIST(dnsname);
-	DECLARE_LIST(ntp);
-	DECLARE_LIST(sip);
-	DECLARE_LIST(sipname);
-	DECLARE_LIST(nis);
-	DECLARE_LIST(nisname);
-	DECLARE_LIST(nisp);
-	DECLARE_LIST(nispname);
-	DECLARE_LIST(bcmcs);
-	DECLARE_LIST(bcmcsname);
-	DECLARE_LIST(aftrname);
+	DECLARE_LEN(dns);
+	DECLARE_LEN(dnsname);
+	DECLARE_LEN(ntp);
+	DECLARE_LEN(sip);
+	DECLARE_LEN(sipname);
+	DECLARE_LEN(nis);
+	DECLARE_LEN(nisname);
+	DECLARE_LEN(nisp);
+	DECLARE_LEN(nispname);
+	DECLARE_LEN(bcmcs);
+	DECLARE_LEN(bcmcsname);
+	DECLARE_LEN(aftrname);
+	DECLARE_LEN(prefixes);
+	DECLARE_LEN(rawopts);
 
 	/* if a script is not specified, do nothing */
 	if (scriptpath == NULL || strlen(scriptpath) == 0) {
@@ -131,74 +235,34 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 
 	d_printf(LOG_DEBUG, FNAME, "executes %s", scriptpath);
 
-	if (state == DHCP6S_EXIT) {
-		goto setenv;
+	/* full environment only during runtime */
+	if (state != DHCP6S_EXIT) {
+		COUNT_LIST(dns, 1);
+		COUNT_LIST(dnsname, 0);
+		COUNT_LIST(ntp, 1);
+		COUNT_LIST(sip, 1);
+		COUNT_LIST(sipname, 0);
+		COUNT_LIST(nis, 1);
+		COUNT_LIST(nisname, 0);
+		COUNT_LIST(nisp, 1);
+		COUNT_LIST(nispname, 0);
+		COUNT_LIST(bcmcs, 1);
+		COUNT_LIST(bcmcsname, 0);
+		COUNT_LIST(aftrname, 0);
+		COUNT_PREFIX();
+		COUNT_RAWOPT();
 	}
 
-	COUNT_LIST(dns, 1);
-	COUNT_LIST(dnsname, 0);
-	COUNT_LIST(ntp, 1);
-	COUNT_LIST(sip, 1);
-	COUNT_LIST(sipname, 0);
-	COUNT_LIST(nis, 1);
-	COUNT_LIST(nisname, 0);
-	COUNT_LIST(nisp, 1);
-	COUNT_LIST(nispname, 0);
-	COUNT_LIST(bcmcs, 1);
-	COUNT_LIST(bcmcsname, 0);
-	COUNT_LIST(aftrname, 0);
-
-	for (iav = TAILQ_FIRST(&optinfo->iapd_list); iav;
-	    iav = TAILQ_NEXT(iav, link)) {
-		for (siav = TAILQ_FIRST(&iav->sublist); siav;
-		    siav = TAILQ_NEXT(siav, link)) {
-			if (siav->type == DHCP6_LISTVAL_PREFIX6) {
-				prefixes += 1;
-			}
-		}
-	}
-	envc += prefixes ? 1 : 0;
-
-	for (rawopt = TAILQ_FIRST(&optinfo->rawopt_list); rawopt;
-	    rawopt = TAILQ_NEXT(rawopt, link)) {
-		rawopts += 1;
-	}
-	envc += rawopts;
-
-setenv:
-	/* allocate an environments array */
+	/* allocate an environments array and fill it */
 	if ((envp = malloc(sizeof (char *) * envc)) == NULL) {
 		d_printf(LOG_NOTICE, FNAME,
 		    "failed to allocate environment buffer");
 		return -1;
 	}
 	memset(envp, 0, sizeof(char *) * envc);
-
-	/*
-	 * Copy the parameters as environment variables
-	 */
-
-	{
-		struct dhcp6_event ev;
-		ev.state = state;
-		snprintf(reason, sizeof(reason), "REASON=%s",
-		    dhcp6_event_statestr(&ev));
-	}
-
 	i = 0;
 
-	/* reason */
-	if ((envp[i++] = strdup(reason)) == NULL) {
-		d_printf(LOG_NOTICE, FNAME,
-		    "failed to allocate reason strings");
-		ret = -1;
-		goto clean;
-	}
-
-	if (state == DHCP6S_EXIT) {
-		goto launch;
-	}
-
+	RENDER_REASON();
 	RENDER_LIST(dns, "new_domain_name_servers", 1);
 	RENDER_LIST(dnsname, "new_domain_name", 0);
 	RENDER_LIST(ntp, "new_ntp_servers", 1);
@@ -211,74 +275,9 @@ setenv:
 	RENDER_LIST(bcmcs, "new_bcmcs_servers", 1);
 	RENDER_LIST(bcmcsname, "new_bcmcs_name", 0);
 	RENDER_LIST(aftrname, "new_aftr_name", 0);
+	RENDER_PREFIX();
+	RENDER_RAWOPT();
 
-	if (prefixes) {
-#define PDINFO_MAX	64
-		char *str = "PDINFO";
-		char *sptr;
-		int slen = sizeof (str) + PDINFO_MAX * prefixes + 1;
-
-		if ((sptr = envp[i++] = malloc(slen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate prefixinfo strings");
-			ret = -1;
-			goto clean;
-		}
-
-		memset(sptr, 0, slen);
-		snprintf(sptr, slen, "%s=", str);
-
-		for (iav = TAILQ_FIRST(&optinfo->iapd_list); iav;
-		    iav = TAILQ_NEXT(iav, link)) {
-			for (siav = TAILQ_FIRST(&iav->sublist); siav;
-			    siav = TAILQ_NEXT(siav, link)) {
-				if (siav->type == DHCP6_LISTVAL_PREFIX6) {
-					char prefixinfo[PDINFO_MAX];
-
-					snprintf(prefixinfo, sizeof(prefixinfo),
-					    "%s/%d", in6addr2str(&siav->val_prefix6.addr, 0),
-					    siav->val_prefix6.plen);
-
-					strlcat(sptr, prefixinfo, slen);
-					strlcat(sptr, " ", slen);
-				}
-			}
-		}
-	}
-
-	for (rawopt = TAILQ_FIRST(&optinfo->rawopt_list); rawopt;
-	    rawopt = TAILQ_NEXT(rawopt, link)) {
-		/*
-		 * max of 5 numbers after last underscore
-		 * (seems like max DHCPv6 option could be 65535)
-		 * then underscore and equal sign plus hex signs
-		 * of each byte
-		 */
-		int slen = sizeof(raw_dhcp_option_str) + 5 + 2 +
-		    rawopt->datalen * 2;
-		char *sptr;
-
-		if ((sptr = envp[i++] = malloc(slen)) == NULL) {
-			d_printf(LOG_NOTICE, FNAME,
-			    "failed to allocate string for DHCPv6 option %d",
-			    rawopt->opnum);
-			ret = -1;
-			goto clean;
-		}
-
-		/* make raw options available as raw_dhcp_option_xyz=hexresponse */
-		snprintf(sptr, slen, "%s_%d=", raw_dhcp_option_str, rawopt->opnum);
-		const char *hex = "0123456789abcdef";
-		char val[3];
-		for (int o = 0; o < rawopt->datalen; o++) {
-			val[0] = hex[(rawopt->data[o]>>4) & 0x0F];
-			val[1] = hex[(rawopt->data[o]   ) & 0x0F];
-			val[2] = 0x00;
-			strlcat(sptr, val, slen);
-		}
-	}
-
-launch:
 	/* launch the script */
 	pid = fork();
 	if (pid < 0) {
@@ -327,9 +326,10 @@ launch:
 		exit(0);
 	}
 
-  clean:
-	for (i = 0; i < envc; i++)
+clean:
+	for (i = 0; i < envc; i++) {
 		free(envp[i]);
+	}
 	free(envp);
 
 	return ret;

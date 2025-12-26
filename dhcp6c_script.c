@@ -65,18 +65,19 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 
 #define DECLARE_LIST(lname)	int lname##_len = 0;
 
-#define COUNT_LIST(lname)	do { \
-	lname##_len = 0; \
+#define COUNT_LIST(lname, lip)	do { \
 	for (v = TAILQ_FIRST(&optinfo->lname##_list); v; \
-	    v = TAILQ_NEXT(v, link)) \
-		lname##_len++; \
+	    v = TAILQ_NEXT(v, link)) { \
+		/* one space separator plus address length or as is */ \
+		lname##_len += 1 + ((lip) ? INET6_ADDRSTRLEN : lname##_len); \
+	} \
 	envc += lname##_len ? 1 : 0; \
 } while (0)
 
 #define ADDR_LIST(lname, lstr)	do { \
 	if (lname##_len) { \
 		/* "var=addr1 addr2 ... addrN" + null char for termination */ \
-		int slen = sizeof(lstr) + 2 + (INET6_ADDRSTRLEN + 1) * lname##_len; \
+		int slen = sizeof(lstr) + 2 + lname##_len; \
 		char *sptr; \
 		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
 			d_printf(LOG_NOTICE, FNAME, \
@@ -97,6 +98,7 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 
 #define NAME_LIST(lname, lstr)	do { \
 	if (lname##_len) { \
+		/* "var=name1 name2 ... nameN" + null char for termination */ \
 		int slen = sizeof(lstr) + 2 + lname##_len; \
 		char *sptr; \
 		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
@@ -155,18 +157,18 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	if (state == DHCP6S_EXIT)
 		goto setenv;
 
-	COUNT_LIST(dns);
-	COUNT_LIST(dnsname);
-	COUNT_LIST(ntp);
-	COUNT_LIST(sip);
-	COUNT_LIST(sipname);
-	COUNT_LIST(nis);
-	COUNT_LIST(nisname);
-	COUNT_LIST(nisp);
-	COUNT_LIST(nispname);
-	COUNT_LIST(bcmcs);
-	COUNT_LIST(bcmcsname);
-	COUNT_LIST(aftrname);
+	COUNT_LIST(dns, 1);
+	COUNT_LIST(dnsname, 0);
+	COUNT_LIST(ntp, 1);
+	COUNT_LIST(sip, 1);
+	COUNT_LIST(sipname, 0);
+	COUNT_LIST(nis, 1);
+	COUNT_LIST(nisname, 0);
+	COUNT_LIST(nisp, 1);
+	COUNT_LIST(nispname, 0);
+	COUNT_LIST(bcmcs, 1);
+	COUNT_LIST(bcmcsname, 0);
+	COUNT_LIST(aftrname, 0);
 
 	/* XXX count rawopt_list here too? */
 

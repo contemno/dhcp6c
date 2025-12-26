@@ -75,9 +75,9 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 	envc += lname##_len ? 1 : 0; \
 } while (0)
 
-#define ADDR_LIST(lname, lstr)	do { \
+#define RENDER_LIST(lname, lstr, lip)	do { \
 	if (lname##_len) { \
-		/* "var=addr1 addr2 ... addrN" + null char for termination */ \
+		/* "var=" + null char for termination */ \
 		int slen = sizeof(lstr) + 2 + lname##_len; \
 		char *sptr; \
 		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
@@ -90,29 +90,8 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 		snprintf(sptr, slen, "%s=", lstr); \
 		for (v = TAILQ_FIRST(&optinfo->lname##_list); v; \
 		    v = TAILQ_NEXT(v, link)) { \
-			char *addr = in6addr2str(&v->val_addr6, 0); \
-			strlcat(sptr, addr, slen); \
-			strlcat(sptr, " ", slen); \
-		} \
-	} \
-} while (0)
-
-#define NAME_LIST(lname, lstr)	do { \
-	if (lname##_len) { \
-		/* "var=name1 name2 ... nameN" + null char for termination */ \
-		int slen = sizeof(lstr) + 2 + lname##_len; \
-		char *sptr; \
-		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
-			d_printf(LOG_NOTICE, FNAME, \
-			    "failed to allocate strings for %s", lstr); \
-			ret = -1; \
-			goto clean; \
-		} \
-		memset(sptr, 0, slen); \
-		snprintf(sptr, slen, "%s=", lstr); \
-		for (v = TAILQ_FIRST(&optinfo->dnsname_list); v; \
-		    v = TAILQ_NEXT(v, link)) { \
-			strlcat(sptr, v->val_vbuf.dv_buf, slen); \
+			strlcat(sptr, (lip) ? in6addr2str(&v->val_addr6, 0) : \
+			    v->val_vbuf.dv_buf, slen); \
 			strlcat(sptr, " ", slen); \
 		} \
 	} \
@@ -205,18 +184,18 @@ setenv:
 	if (state == DHCP6S_EXIT)
 		goto launch;
 
-	ADDR_LIST(dns, "new_domain_name_servers");
-	NAME_LIST(dnsname, "new_domain_name");
-	ADDR_LIST(ntp, "new_ntp_servers");
-	ADDR_LIST(sip, "new_sip_servers");
-	NAME_LIST(sipname, "new_sip_name");
-	ADDR_LIST(nis, "new_nis_servers");
-	NAME_LIST(nisname, "new_nis_name");
-	ADDR_LIST(nisp, "new_nisp_servers");
-	NAME_LIST(nispname, "new_nisp_name");
-	ADDR_LIST(bcmcs, "new_bcmcs_servers");
-	NAME_LIST(bcmcsname, "new_bcmcs_name");
-	NAME_LIST(aftrname, "new_aftr_name");
+	RENDER_LIST(dns, "new_domain_name_servers", 1);
+	RENDER_LIST(dnsname, "new_domain_name", 0);
+	RENDER_LIST(ntp, "new_ntp_servers", 1);
+	RENDER_LIST(sip, "new_sip_servers", 1);
+	RENDER_LIST(sipname, "new_sip_name", 0);
+	RENDER_LIST(nis, "new_nis_servers", 1);
+	RENDER_LIST(nisname, "new_nis_name", 0);
+	RENDER_LIST(nisp, "new_nisp_servers", 1);
+	RENDER_LIST(nispname, "new_nisp_name", 0);
+	RENDER_LIST(bcmcs, "new_bcmcs_servers", 1);
+	RENDER_LIST(bcmcsname, "new_bcmcs_name", 0);
+	RENDER_LIST(aftrname, "new_aftr_name", 0);
 
 	if (prefixes) {
 #define PDINFO_MAX	64

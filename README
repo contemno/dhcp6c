@@ -10,6 +10,12 @@ Improvements include the following:
 - Allow assigning the prefix to the WAN interface
 - Several relevant patches from Debian
 - Extended prefix-interface ifid options
+- Added -t mode for configuration file testing
+- Improved RELEASE, NOTONLINK and NOADDRSAVAIL behaviour
+- Moved code to use arc4random_uniform() to avoid unsafe random()
+- Timing parameter updates according to RFC 8415, Section 7.6
+- Use the PID file to safely check for running process
+- Use lease timings for prefixes so they can expire in the OS
 
 It is based on a patched version of WIDE-DHCPv6 maintained by hrs@FreeBSD.org.
 

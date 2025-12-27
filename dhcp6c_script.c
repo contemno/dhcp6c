@@ -89,6 +89,9 @@
 	envc += lname##_len ? 1 : 0; \
 } while (0)
 
+#define COUNT_ADDR(lname)	COUNT_LIST(lname, 1)
+#define COUNT_NAME(lname)	COUNT_LIST(lname, 0)
+
 #define RENDER_LIST(lstr, lname, lip)	do { \
 	if (lname##_len) { \
 		/* "var=" + null char for termination */ \
@@ -112,27 +115,30 @@
 	} \
 } while (0)
 
-#define COUNT_PREFIX()	do { \
+#define RENDER_ADDR(lstr, lname)	RENDER_LIST(lstr, lname, 1)
+#define RENDER_NAME(lstr, lname)	RENDER_LIST(lstr, lname, 0)
+
+#define COUNT_PREFIX(lname)	do { \
 	struct dhcp6_listval *iav, *siav; \
-	for (iav = TAILQ_FIRST(&optinfo->iapd_list); iav; \
+	for (iav = TAILQ_FIRST(&optinfo->lname##_list); iav; \
 	    iav = TAILQ_NEXT(iav, link)) { \
 		for (siav = TAILQ_FIRST(&iav->sublist); siav; \
 		    siav = TAILQ_NEXT(siav, link)) { \
 			if (siav->type == DHCP6_LISTVAL_PREFIX6) { \
 				/* one space separator plus prefix length max */ \
-				prefixes_len += 1 + PDINFO_MAX; \
+				lname##_len += 1 + PDINFO_MAX; \
 			} \
 		} \
 	} \
-	envc += prefixes_len ? 1 : 0; \
+	envc += lname##_len ? 1 : 0; \
 } while (0)
 
-#define RENDER_PREFIX(lstr)	do { \
-	if (prefixes_len) { \
+#define RENDER_PREFIX(lstr, lname)	do { \
+	if (lname##_len) { \
 		struct dhcp6_listval *iav, *siav; \
 		char prefixinfo[PDINFO_MAX]; \
 		char *sptr; \
-		int slen = sizeof(lstr) + 2 + prefixes_len; \
+		int slen = sizeof(lstr) + 2 + lname##_len; \
 		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
 			d_printf(LOG_NOTICE, FNAME, \
 			    "failed to allocate prefixinfo strings"); \
@@ -141,7 +147,7 @@
 		} \
 		memset(sptr, 0, slen); \
 		snprintf(sptr, slen, "%s=", lstr); \
-		for (iav = TAILQ_FIRST(&optinfo->iapd_list); iav; \
+		for (iav = TAILQ_FIRST(&optinfo->lname##_list); iav; \
 		    iav = TAILQ_NEXT(iav, link)) { \
 			for (siav = TAILQ_FIRST(&iav->sublist); siav; \
 			    siav = TAILQ_NEXT(siav, link)) { \
@@ -157,22 +163,22 @@
 	} \
 } while (0)
 
-#define COUNT_RAWOPT()	do { \
+#define COUNT_RAWOPT(lname)	do { \
 	struct rawoption *rawopt; \
-	for (rawopt = TAILQ_FIRST(&optinfo->rawopt_list); rawopt; \
+	for (rawopt = TAILQ_FIRST(&optinfo->lname##_list); rawopt; \
 	    rawopt = TAILQ_NEXT(rawopt, link)) { \
-		rawopts_len += 1; \
+		lname##_len += 1; \
 	} \
-	envc += rawopts_len; \
+	envc += lname##_len; \
 } while (0)
 
-#define RENDER_RAWOPT(lstr)	do { \
-	if (rawopts_len) { \
+#define RENDER_RAWOPT(lstr, lname)	do { \
+	if (lname##_len) { \
 		const char *hex = "0123456789abcdef"; \
 		struct rawoption *rawopt; \
 		char val[3]; \
 		int o; \
-		for (rawopt = TAILQ_FIRST(&optinfo->rawopt_list); rawopt; \
+		for (rawopt = TAILQ_FIRST(&optinfo->lname##_list); rawopt; \
 		    rawopt = TAILQ_NEXT(rawopt, link)) { \
 			/* \
 			 * max of 5 numbers after last underscore \
@@ -209,6 +215,7 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	char **envp;
 	pid_t pid, wpid;
 
+	DECLARE_LEN(iapd);
 	DECLARE_LEN(dns);
 	DECLARE_LEN(dnsname);
 	DECLARE_LEN(ntp);
@@ -221,8 +228,7 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	DECLARE_LEN(bcmcs);
 	DECLARE_LEN(bcmcsname);
 	DECLARE_LEN(aftrname);
-	DECLARE_LEN(prefixes);
-	DECLARE_LEN(rawopts);
+	DECLARE_LEN(rawopt);
 
 	/* if a script is not specified, do nothing */
 	if (scriptpath == NULL || strlen(scriptpath) == 0) {
@@ -233,20 +239,20 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 
 	/* full environment only during runtime */
 	if (state != DHCP6S_EXIT) {
-		COUNT_LIST(dns, 1);
-		COUNT_LIST(dnsname, 0);
-		COUNT_LIST(ntp, 1);
-		COUNT_LIST(sip, 1);
-		COUNT_LIST(sipname, 0);
-		COUNT_LIST(nis, 1);
-		COUNT_LIST(nisname, 0);
-		COUNT_LIST(nisp, 1);
-		COUNT_LIST(nispname, 0);
-		COUNT_LIST(bcmcs, 1);
-		COUNT_LIST(bcmcsname, 0);
-		COUNT_LIST(aftrname, 0);
-		COUNT_PREFIX();
-		COUNT_RAWOPT();
+		COUNT_PREFIX(iapd);
+		COUNT_ADDR(dns);
+		COUNT_NAME(dnsname);
+		COUNT_ADDR(ntp);
+		COUNT_ADDR(sip);
+		COUNT_NAME(sipname);
+		COUNT_ADDR(nis);
+		COUNT_NAME(nisname);
+		COUNT_ADDR(nisp);
+		COUNT_NAME(nispname);
+		COUNT_ADDR(bcmcs);
+		COUNT_NAME(bcmcsname);
+		COUNT_NAME(aftrname);
+		COUNT_RAWOPT(rawopt);
 	}
 
 	/* allocate an environments array and fill it */
@@ -259,21 +265,20 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	i = 0;
 
 	RENDER_REASON("REASON");
-	RENDER_LIST("new_domain_name_servers", dns, 1);
-	RENDER_LIST("new_domain_name", dnsname, 0);
-	RENDER_LIST("new_ntp_servers", ntp, 1);
-	RENDER_LIST("new_sip_servers", sip, 1);
-	RENDER_LIST("new_sip_name", sipname, 0);
-	RENDER_LIST("new_nis_servers", nis, 1);
-	RENDER_LIST("new_nis_name", nisname, 0);
-	RENDER_LIST("new_nisp_servers", nisp, 1);
-	RENDER_LIST("new_nisp_name", nispname, 0);
-	RENDER_LIST("new_bcmcs_servers", bcmcs, 1);
-	RENDER_LIST("new_bcmcs_name", bcmcsname, 0);
-	RENDER_LIST("new_aftr_name", aftrname, 0);
-	RENDER_PREFIX("PDINFO");
-	RENDER_RAWOPT("raw_dhcp_option");
-
+	RENDER_PREFIX("PDINFO", iapd);
+	RENDER_ADDR("new_domain_name_servers", dns);
+	RENDER_NAME("new_domain_name", dnsname);
+	RENDER_ADDR("new_ntp_servers", ntp);
+	RENDER_ADDR("new_sip_servers", sip);
+	RENDER_NAME("new_sip_name", sipname);
+	RENDER_ADDR("new_nis_servers", nis);
+	RENDER_NAME("new_nis_name", nisname);
+	RENDER_ADDR("new_nisp_servers", nisp);
+	RENDER_NAME("new_nisp_name", nispname);
+	RENDER_ADDR("new_bcmcs_servers", bcmcs);
+	RENDER_NAME("new_bcmcs_name", bcmcsname);
+	RENDER_NAME("new_aftr_name", aftrname);
+	RENDER_RAWOPT("raw_dhcp_option", rawopt);
 
 	/* launch the script */
 	pid = fork();

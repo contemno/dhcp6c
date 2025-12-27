@@ -62,15 +62,14 @@
 #include "dhcp6c.h"
 #include "common.h"
 
-static char raw_dhcp_option_str[] = "raw_dhcp_option";
-
 #define DECLARE_LEN(lname)	int lname##_len = 0;
+#define PDINFO_MAX		64
 
-#define RENDER_REASON()		do { \
+#define RENDER_REASON(lstr)	do { \
 	struct dhcp6_event ev; \
-	char reason[32]; \
+	char reason[PDINFO_MAX]; \
 	ev.state = state; \
-	snprintf(reason, sizeof(reason), "REASON=%s", \
+	snprintf(reason, sizeof(reason), "%s=%s", lstr, \
 	    dhcp6_event_statestr(&ev)); \
 	if ((envp[i++] = strdup(reason)) == NULL) { \
 		d_printf(LOG_NOTICE, FNAME, \
@@ -90,7 +89,7 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 	envc += lname##_len ? 1 : 0; \
 } while (0)
 
-#define RENDER_LIST(lname, lstr, lip)	do { \
+#define RENDER_LIST(lstr, lname, lip)	do { \
 	if (lname##_len) { \
 		/* "var=" + null char for termination */ \
 		int slen = sizeof(lstr) + 2 + lname##_len; \
@@ -113,8 +112,6 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 	} \
 } while (0)
 
-#define PDINFO_MAX	64
-
 #define COUNT_PREFIX()	do { \
 	struct dhcp6_listval *iav, *siav; \
 	for (iav = TAILQ_FIRST(&optinfo->iapd_list); iav; \
@@ -130,13 +127,12 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 	envc += prefixes_len ? 1 : 0; \
 } while (0)
 
-#define RENDER_PREFIX()	do { \
+#define RENDER_PREFIX(lstr)	do { \
 	if (prefixes_len) { \
 		struct dhcp6_listval *iav, *siav; \
 		char prefixinfo[PDINFO_MAX]; \
-		char *str = "PDINFO"; \
 		char *sptr; \
-		int slen = sizeof(str) + 2 + prefixes_len; \
+		int slen = sizeof(lstr) + 2 + prefixes_len; \
 		if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
 			d_printf(LOG_NOTICE, FNAME, \
 			    "failed to allocate prefixinfo strings"); \
@@ -144,7 +140,7 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 			goto clean; \
 		} \
 		memset(sptr, 0, slen); \
-		snprintf(sptr, slen, "%s=", str); \
+		snprintf(sptr, slen, "%s=", lstr); \
 		for (iav = TAILQ_FIRST(&optinfo->iapd_list); iav; \
 		    iav = TAILQ_NEXT(iav, link)) { \
 			for (siav = TAILQ_FIRST(&iav->sublist); siav; \
@@ -170,21 +166,21 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 	envc += rawopts_len; \
 } while (0)
 
-#define RENDER_RAWOPT()	do { \
+#define RENDER_RAWOPT(lstr)	do { \
 	if (rawopts_len) { \
 		const char *hex = "0123456789abcdef"; \
 		struct rawoption *rawopt; \
 		char val[3]; \
+		int o; \
 		for (rawopt = TAILQ_FIRST(&optinfo->rawopt_list); rawopt; \
 		    rawopt = TAILQ_NEXT(rawopt, link)) { \
 			/* \
 			 * max of 5 numbers after last underscore \
 			 * (seems like max DHCPv6 option could be 65535) \
-			 * then underscore and equal sign plus hex signs \
-			 * of each byte \
+			 * then underscore, equal sign and null char plus \
+			 * hex signs of each byte and "0x" \
 			 */ \
-			int slen = sizeof(raw_dhcp_option_str) + 5 + 2 + \
-			    rawopt->datalen * 2; \
+			int slen = sizeof(lstr) + 5 + 3 + (rawopt->datalen * 2) + 2; \
 			char *sptr; \
 			if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
 				d_printf(LOG_NOTICE, FNAME, \
@@ -193,9 +189,9 @@ static char raw_dhcp_option_str[] = "raw_dhcp_option";
 				ret = -1; \
 				goto clean; \
 			} \
-			/* make raw options available as raw_dhcp_option_xyz=hexresponse */ \
-			snprintf(sptr, slen, "%s_%d=", raw_dhcp_option_str, rawopt->opnum); \
-			for (int o = 0; o < rawopt->datalen; o++) { \
+			/* make raw options available as lstr_abcdef=0xhexresponse */ \
+			snprintf(sptr, slen, "%s_%d=0x", lstr, rawopt->opnum); \
+			for (o = 0; o < rawopt->datalen; o++) { \
 				val[0] = hex[(rawopt->data[o]>>4) & 0x0F]; \
 				val[1] = hex[(rawopt->data[o]   ) & 0x0F]; \
 				val[2] = 0x00; \
@@ -262,21 +258,22 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	memset(envp, 0, sizeof(char *) * envc);
 	i = 0;
 
-	RENDER_REASON();
-	RENDER_LIST(dns, "new_domain_name_servers", 1);
-	RENDER_LIST(dnsname, "new_domain_name", 0);
-	RENDER_LIST(ntp, "new_ntp_servers", 1);
-	RENDER_LIST(sip, "new_sip_servers", 1);
-	RENDER_LIST(sipname, "new_sip_name", 0);
-	RENDER_LIST(nis, "new_nis_servers", 1);
-	RENDER_LIST(nisname, "new_nis_name", 0);
-	RENDER_LIST(nisp, "new_nisp_servers", 1);
-	RENDER_LIST(nispname, "new_nisp_name", 0);
-	RENDER_LIST(bcmcs, "new_bcmcs_servers", 1);
-	RENDER_LIST(bcmcsname, "new_bcmcs_name", 0);
-	RENDER_LIST(aftrname, "new_aftr_name", 0);
-	RENDER_PREFIX();
-	RENDER_RAWOPT();
+	RENDER_REASON("REASON");
+	RENDER_LIST("new_domain_name_servers", dns, 1);
+	RENDER_LIST("new_domain_name", dnsname, 0);
+	RENDER_LIST("new_ntp_servers", ntp, 1);
+	RENDER_LIST("new_sip_servers", sip, 1);
+	RENDER_LIST("new_sip_name", sipname, 0);
+	RENDER_LIST("new_nis_servers", nis, 1);
+	RENDER_LIST("new_nis_name", nisname, 0);
+	RENDER_LIST("new_nisp_servers", nisp, 1);
+	RENDER_LIST("new_nisp_name", nispname, 0);
+	RENDER_LIST("new_bcmcs_servers", bcmcs, 1);
+	RENDER_LIST("new_bcmcs_name", bcmcsname, 0);
+	RENDER_LIST("new_aftr_name", aftrname, 0);
+	RENDER_PREFIX("PDINFO");
+	RENDER_RAWOPT("raw_dhcp_option");
+
 
 	/* launch the script */
 	pid = fork();

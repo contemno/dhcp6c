@@ -1595,6 +1595,22 @@ find_server(struct dhcp6_event *ev, struct duid *duid)
 	return (NULL);
 }
 
+#define PRINT_LIST(lname, lstr, lip)	do { \
+	if (!TAILQ_EMPTY(&optinfo->lname##_list)) { \
+		struct dhcp6_listval *d; \
+		int i = 0; \
+		for (d = TAILQ_FIRST(&optinfo->lname##_list); d; \
+		     d = TAILQ_NEXT(d, link), i++) { \
+			info_printf("%s[%d] %s", (lstr), \
+			    i, (lip) ? in6addr2str(&d->val_addr6, 0) : \
+			    d->val_vbuf.dv_buf); \
+		} \
+	} \
+} while (0)
+
+#define PRINT_ADDR(lname, lstr)	PRINT_LIST(lname, lstr, 1)
+#define PRINT_NAME(lname, lstr)	PRINT_LIST(lname, lstr, 0)
+
 static int
 client6_recvreply(struct dhcp6_if *ifp, struct dhcp6 *dh6,
     ssize_t len, struct dhcp6_optinfo *optinfo)
@@ -1684,71 +1700,12 @@ client6_recvreply(struct dhcp6_if *ifp, struct dhcp6 *dh6,
 		/* XXX is it wise to continue with an error in the reply? */
 	}
 
-	if (!TAILQ_EMPTY(&optinfo->dns_list)) {
-		struct dhcp6_listval *d;
-		int i = 0;
-
-		for (d = TAILQ_FIRST(&optinfo->dns_list); d;
-		     d = TAILQ_NEXT(d, link), i++) {
-			info_printf("Domain name server[%d] %s",
-			    i, in6addr2str(&d->val_addr6, 0));
-		}
-	}
-
-	if (!TAILQ_EMPTY(&optinfo->dnsname_list)) {
-		struct dhcp6_listval *d;
-		int i = 0;
-
-		for (d = TAILQ_FIRST(&optinfo->dnsname_list); d;
-		     d = TAILQ_NEXT(d, link), i++) {
-			info_printf("Domain search list[%d] %s",
-			    i, d->val_vbuf.dv_buf);
-		}
-	}
-
-	if (!TAILQ_EMPTY(&optinfo->ntp_list)) {
-		struct dhcp6_listval *d;
-		int i = 0;
-
-		for (d = TAILQ_FIRST(&optinfo->ntp_list); d;
-		     d = TAILQ_NEXT(d, link), i++) {
-			info_printf("NTP server[%d] %s",
-			    i, in6addr2str(&d->val_addr6, 0));
-		}
-	}
-
-	if (!TAILQ_EMPTY(&optinfo->sip_list)) {
-		struct dhcp6_listval *d;
-		int i = 0;
-
-		for (d = TAILQ_FIRST(&optinfo->sip_list); d;
-		     d = TAILQ_NEXT(d, link), i++) {
-			info_printf("SIP server address[%d] %s",
-			    i, in6addr2str(&d->val_addr6, 0));
-		}
-	}
-
-	if (!TAILQ_EMPTY(&optinfo->sipname_list)) {
-		struct dhcp6_listval *d;
-		int i = 0;
-
-		for (d = TAILQ_FIRST(&optinfo->sipname_list); d;
-		     d = TAILQ_NEXT(d, link), i++) {
-			info_printf("SIP domain name[%d] %s",
-			    i, d->val_vbuf.dv_buf);
-		}
-	}
-
-	if (!TAILQ_EMPTY(&optinfo->aftrname_list)) {
-		struct dhcp6_listval *d;
-		int i = 0;
-
-		for (d = TAILQ_FIRST(&optinfo->aftrname_list); d;
-		     d = TAILQ_NEXT(d, link), i++) {
-			info_printf("AFTR domain name[%d] %s",
-			    i, d->val_vbuf.dv_buf);
-		}
-	}
+	PRINT_ADDR(dns, "Domain name server");
+	PRINT_NAME(dnsname, "Domain search list");
+	PRINT_ADDR(ntp, "NTP server address");
+	PRINT_ADDR(sip, "SIP server address");
+	PRINT_NAME(sipname, "SIP domain name");
+	PRINT_NAME(aftrname, "AFTR domain name");
 
 	/*
 	 * Set refresh timer for configuration information specified in

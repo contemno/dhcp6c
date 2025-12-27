@@ -516,19 +516,23 @@ check_exit(void)
 {
 	struct dhcp6_if *ifp;
 
-	if (!exit_ok)
+	if (!exit_ok) {
 		return;
+	}
 
 	for (ifp = dhcp6_if; ifp; ifp = ifp->next) {
 		/*
-		 * Check if we have an outstanding event.  If we do, we cannot
-		 * exit for now.
+		 * Check if we have an outstanding event.
+		 * If we do, we cannot exit for now.
 		 */
-		if (!TAILQ_EMPTY(&ifp->event_list))
+		if (!TAILQ_EMPTY(&ifp->event_list)) {
 			return;
+		}
 	}
-	for (ifp = dhcp6_if; ifp; ifp = ifp->next)
+
+	for (ifp = dhcp6_if; ifp; ifp = ifp->next) {
 		client6_script(ifp->scriptpath, DHCP6S_EXIT, NULL);
+	}
 
 	/* We have no existing event.  Do exit. */
 	d_printf(LOG_INFO, FNAME, "exiting");
@@ -1686,7 +1690,7 @@ client6_recvreply(struct dhcp6_if *ifp, struct dhcp6 *dh6,
 
 		for (d = TAILQ_FIRST(&optinfo->dns_list); d;
 		     d = TAILQ_NEXT(d, link), i++) {
-			info_printf("nameserver[%d] %s",
+			info_printf("Domain name server[%d] %s",
 			    i, in6addr2str(&d->val_addr6, 0));
 		}
 	}
@@ -1742,7 +1746,7 @@ client6_recvreply(struct dhcp6_if *ifp, struct dhcp6 *dh6,
 		for (d = TAILQ_FIRST(&optinfo->aftrname_list); d;
 		     d = TAILQ_NEXT(d, link), i++) {
 			info_printf("AFTR domain name[%d] %s",
-			    i, in6addr2str(&d->val_addr6, 0));
+			    i, d->val_vbuf.dv_buf);
 		}
 	}
 
@@ -1824,6 +1828,7 @@ client6_recvreply(struct dhcp6_if *ifp, struct dhcp6 *dh6,
 		free_resources(NULL);
 		check_exit();
 	}
+
 	return (0);
 }
 

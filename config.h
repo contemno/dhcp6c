@@ -324,7 +324,6 @@ void configure_commit(void);
 int cfparse(const char *);
 struct dhcp6_if *find_ifconfbyname(char *);
 struct dhcp6_if *find_ifconfbyid(unsigned int);
-struct prefix_ifconf *find_prefixifconf(char *);
 struct host_conf *find_hostconf(struct duid *);
 struct authinfo *find_authinfo(struct authinfo *, char *);
 struct dhcp6_prefix *find_prefix6(struct dhcp6_list *,

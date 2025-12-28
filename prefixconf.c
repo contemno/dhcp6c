@@ -79,6 +79,21 @@ struct iactl_pd {
 #define iacpd_release_data common.release_data
 #define iacpd_cleanup common.cleanup
 
+#ifndef ND6_INFINITE_LIFETIME
+#define ND6_INFINITE_LIFETIME 0xffffffff
+#endif
+
+#define UPDATE_LEASETIME(pip, sp)	do { \
+	(pip)->pinfo.pltime = (sp)->prefix.pltime; \
+	if (!(pip)->pinfo.pltime || opt_norelease) { \
+		(pip)->pinfo.pltime = ND6_INFINITE_LIFETIME; \
+	} \
+	(pip)->pinfo.vltime = (sp)->prefix.vltime; \
+	if (!(pip)->pinfo.vltime || opt_norelease) { \
+		(pip)->pinfo.vltime = ND6_INFINITE_LIFETIME; \
+	} \
+} while (0);
+
 struct siteprefix {
 	TAILQ_ENTRY (siteprefix) link;
 
@@ -117,7 +132,7 @@ static void renew_data_free(struct dhcp6_eventdata *);
 static struct dhcp6_timer *siteprefix_timo(void *);
 static int add_ifprefix(struct siteprefix *,
     struct dhcp6_prefix *, struct prefix_ifconf *);
-static int pd_ifaddrconf(ifaddrconf_cmd_t, struct dhcp6_ifprefix *ifpfx);
+static int pd_ifaddrconf(ifaddrconf_cmd_t, struct dhcp6_ifprefix *);
 
 int
 update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
@@ -203,20 +218,13 @@ update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
 				add_ifprefix(sp, pinfo, pif);
 			}
 		} else {
-			struct dhcp6_ifprefix *ip;
+			struct dhcp6_ifprefix *pip;
 
-			for (ip = TAILQ_FIRST(&sp->ifprefix_list); ip; \
-			    ip = TAILQ_NEXT(ip, plink)) {
-				ip->pinfo.pltime = sp->prefix.pltime;
-				if (!ip->pinfo.pltime || opt_norelease) {
-					ip->pinfo.pltime = ND6_INFINITE_LIFETIME;
-				}
-				ip->pinfo.vltime = sp->prefix.vltime;
-				if (!ip->pinfo.vltime || opt_norelease) {
-					ip->pinfo.vltime = ND6_INFINITE_LIFETIME;
-				}
+			for (pip = TAILQ_FIRST(&sp->ifprefix_list); pip; \
+			    pip = TAILQ_NEXT(pip, plink)) {
+				UPDATE_LEASETIME(pip, sp);
 				/* XXX failures are ignored */
-				pd_ifaddrconf(IFADDRCONF_ADD, ip);
+				pd_ifaddrconf(IFADDRCONF_ADD, pip);
 			}
 		}
 	}
@@ -273,19 +281,20 @@ find_siteprefix(struct siteprefix_list *head, struct dhcp6_prefix *prefix,
 static void
 remove_siteprefix(struct siteprefix *sp)
 {
-	struct dhcp6_ifprefix *ip;
+	struct dhcp6_ifprefix *pip;
 
 	d_printf(LOG_DEBUG, FNAME, "remove a site prefix %s/%d",
 	    in6addr2str(&sp->prefix.addr, 0), sp->prefix.plen);
 
-	if (sp->timer)
+	if (sp->timer) {
 		dhcp6_remove_timer(&sp->timer);
+	}
 
 	/* remove all interface prefixes */
-	while ((ip = TAILQ_FIRST(&sp->ifprefix_list)) != NULL) {
-		TAILQ_REMOVE(&sp->ifprefix_list, ip, plink);
-		pd_ifaddrconf(IFADDRCONF_REMOVE, ip);
-		free(ip);
+	while ((pip = TAILQ_FIRST(&sp->ifprefix_list)) != NULL) {
+		TAILQ_REMOVE(&sp->ifprefix_list, pip, plink);
+		pd_ifaddrconf(IFADDRCONF_REMOVE, pip);
+		free(pip);
 	}
 
 	TAILQ_REMOVE(&sp->ctl->siteprefix_head, sp, link);
@@ -423,28 +432,28 @@ siteprefix_timo(void *arg)
 
 static int
 add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
-    struct prefix_ifconf *pconf)
+    struct prefix_ifconf *pif)
 {
-	struct dhcp6_ifprefix *ifpfx = NULL;
+	struct dhcp6_ifprefix *pip = NULL;
 	struct in6_addr *a;
 	u_long sla_id;
 	char *sp;
 	int b, i;
 
-	if ((ifpfx = malloc(sizeof(*ifpfx))) == NULL) {
+	if ((pip = malloc(sizeof(*pip))) == NULL) {
 		d_printf(LOG_NOTICE, FNAME,
 		    "failed to allocate memory for ifprefix");
 		return (-1);
 	}
-	memset(ifpfx, 0, sizeof(*ifpfx));
+	memset(pip, 0, sizeof(*pip));
 
-	ifpfx->ifconf = pconf;
+	pip->ifconf = pif;
 
-	ifpfx->paddr.sin6_family = AF_INET6;
+	pip->paddr.sin6_family = AF_INET6;
 #ifdef HAVE_SA_LEN
-	ifpfx->paddr.sin6_len = sizeof(struct sockaddr_in6);
+	pip->paddr.sin6_len = sizeof(struct sockaddr_in6);
 #endif
-	ifpfx->paddr.sin6_addr = prefix->addr;
+	pip->paddr.sin6_addr = prefix->addr;
 
 	/*
          * dave (bevhost) thinks this should fix it rather than
@@ -452,85 +461,74 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
          * this way the sla-len can be left out of the config file
          * and calculated when the prefix is received
          */
-	if (prefix->plen + pconf->ifid_len + pconf->sla_len > 128) {
-		pconf->sla_len = 128 - pconf->ifid_len - prefix->plen;
+	if (prefix->plen + pif->ifid_len + pif->sla_len > 128) {
+		pif->sla_len = 128 - pif->ifid_len - prefix->plen;
 	}
 
-	ifpfx->pinfo.plen = prefix->plen + pconf->sla_len;
+	pip->pinfo.plen = prefix->plen + pif->sla_len;
 	/*
 	 * XXX: our current implementation assumes ifid len is a multiple of 8
 	 */
-	if ((pconf->ifid_len % 8) != 0) {
+	if ((pif->ifid_len % 8) != 0) {
 		d_printf(LOG_ERR, FNAME,
 		    "assumption failure on the length of interface ID");
 		goto bad;
 	}
-	if (ifpfx->pinfo.plen + pconf->ifid_len < 0 ||
-	    ifpfx->pinfo.plen + pconf->ifid_len > 128) {
+	if (pip->pinfo.plen + pif->ifid_len < 0 ||
+	    pip->pinfo.plen + pif->ifid_len > 128) {
 		d_printf(LOG_INFO, FNAME,
 			"invalid prefix length %d + %d + %d",
-			prefix->plen, pconf->sla_len, pconf->ifid_len);
+			prefix->plen, pif->sla_len, pif->ifid_len);
 		goto bad;
 	}
 
 	/* copy prefix and SLA ID */
-	a = &ifpfx->paddr.sin6_addr;
+	a = &pip->paddr.sin6_addr;
 	b = prefix->plen;
 	for (i = 0, b = prefix->plen; b > 0; b -= 8, i++) {
 		a->s6_addr[i] = prefix->addr.s6_addr[i];
 	}
-	sla_id = htonl(pconf->sla_id);
+	sla_id = htonl(pif->sla_id);
 	sp = ((char *)&sla_id + 3);
-	i = (128 - pconf->ifid_len) / 8;
-	for (b = pconf->sla_len; b > 7; b -= 8, sp--) {
+	i = (128 - pif->ifid_len) / 8;
+	for (b = pif->sla_len; b > 7; b -= 8, sp--) {
 		a->s6_addr[--i] = *sp;
 	}
 	if (b) {
 		a->s6_addr[--i] |= *sp;
 	}
 
-#ifndef ND6_INFINITE_LIFETIME
-#define ND6_INFINITE_LIFETIME 0xffffffff
-#endif
-
 	/* fill prefix info from siteprefix except plen done earlier */
-	ifpfx->pinfo.addr = siteprefix->prefix.addr;
-	ifpfx->pinfo.pltime = siteprefix->prefix.pltime;
-	if (!ifpfx->pinfo.pltime || opt_norelease) {
-		ifpfx->pinfo.pltime = ND6_INFINITE_LIFETIME;
-	}
-	ifpfx->pinfo.vltime = siteprefix->prefix.vltime;
-	if (!ifpfx->pinfo.vltime || opt_norelease) {
-		ifpfx->pinfo.vltime = ND6_INFINITE_LIFETIME;
-	}
+	pip->pinfo.addr = siteprefix->prefix.addr;
+	UPDATE_LEASETIME(pip, siteprefix);
 
 	/* configure the corresponding address */
-	ifpfx->ifaddr = ifpfx->paddr;
-	for (i = 15; i >= pconf->ifid_len / 8; i--) {
-		ifpfx->ifaddr.sin6_addr.s6_addr[i] = pconf->ifid[i];
+	pip->ifaddr = pip->paddr;
+	for (i = 15; i >= pif->ifid_len / 8; i--) {
+		pip->ifaddr.sin6_addr.s6_addr[i] = pif->ifid[i];
 	}
-	if (pd_ifaddrconf(IFADDRCONF_ADD, ifpfx)) {
+	if (pd_ifaddrconf(IFADDRCONF_ADD, pip)) {
 		goto bad;
 	}
 
-	TAILQ_INSERT_TAIL(&siteprefix->ifprefix_list, ifpfx, plink);
+	TAILQ_INSERT_TAIL(&siteprefix->ifprefix_list, pip, plink);
 
 	return (0);
 
 bad:
-	if (ifpfx) {
-		free(ifpfx);
+	if (pip) {
+		free(pip);
 	}
 
 	return (-1);
 }
 
 static int
-pd_ifaddrconf(ifaddrconf_cmd_t cmd, struct dhcp6_ifprefix *ifpfx)
+pd_ifaddrconf(ifaddrconf_cmd_t cmd, struct dhcp6_ifprefix *pip)
 {
-	return (ifaddrconf(cmd, ifpfx->ifconf->ifname, &ifpfx->ifaddr,
-	    ifpfx->pinfo.plen,
-	    ifpfx->pinfo.vltime /* intentionally avoid deprecation */,
+	return (ifaddrconf(cmd, pip->ifconf->ifname, &pip->ifaddr,
+	    pip->pinfo.plen,
+	    pip->pinfo.vltime /* intentionally avoid deprecation */,
 #define ND6_GRACEPERIOD_LIFETIME 60
-	    ifpfx->pinfo.vltime + ND6_GRACEPERIOD_LIFETIME));
+	    pip->pinfo.vltime + ND6_GRACEPERIOD_LIFETIME));
 }

@@ -114,12 +114,9 @@ static void cleanup(struct iactl *);
 static int renew_prefix(struct iactl *, struct dhcp6_ia *,
     struct dhcp6_eventdata **, struct dhcp6_eventdata *);
 static void renew_data_free(struct dhcp6_eventdata *);
-
 static struct dhcp6_timer *siteprefix_timo(void *);
-
 static int add_ifprefix(struct siteprefix *,
     struct dhcp6_prefix *, struct prefix_ifconf *);
-
 static int pd_ifaddrconf(ifaddrconf_cmd_t, struct dhcp6_ifprefix *ifpfx);
 
 int
@@ -199,9 +196,28 @@ update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
 
 	/* update prefix interfaces if necessary */
 	if (sp->prefix.vltime != 0) {
-		for (pif = TAILQ_FIRST(iac_pd->pifc_head); pif;
-		    pif = TAILQ_NEXT(pif, link)) {
-			add_ifprefix(sp, pinfo, pif);
+		if (spcreate) {
+			for (pif = TAILQ_FIRST(iac_pd->pifc_head); pif;
+			    pif = TAILQ_NEXT(pif, link)) {
+				/* XXX failures are ignored */
+				add_ifprefix(sp, pinfo, pif);
+			}
+		} else {
+			struct dhcp6_ifprefix *ip;
+
+			for (ip = TAILQ_FIRST(&sp->ifprefix_list); ip; \
+			    ip = TAILQ_NEXT(ip, plink)) {
+				ip->pinfo.pltime = sp->prefix.pltime;
+				if (!ip->pinfo.pltime || opt_norelease) {
+					ip->pinfo.pltime = ND6_INFINITE_LIFETIME;
+				}
+				ip->pinfo.vltime = sp->prefix.vltime;
+				if (!ip->pinfo.vltime || opt_norelease) {
+					ip->pinfo.vltime = ND6_INFINITE_LIFETIME;
+				}
+				/* XXX failures are ignored */
+				pd_ifaddrconf(IFADDRCONF_ADD, ip);
+			}
 		}
 	}
 
@@ -336,15 +352,18 @@ renew_prefix(struct iactl *iac, struct dhcp6_ia *iaparam,
 	for (sp = TAILQ_FIRST(&iac_pd->siteprefix_head); sp;
 	    sp = TAILQ_NEXT(sp, link)) {
 		if (dhcp6_add_listval(&pl, DHCP6_LISTVAL_PREFIX6,
-		    &sp->prefix, NULL) == NULL)
+		    &sp->prefix, NULL) == NULL) {
 			goto fail;
+		}
 	}
 
-	if ((ial = malloc(sizeof(*ial))) == NULL)
+	if ((ial = malloc(sizeof(*ial))) == NULL) {
 		goto fail;
+	}
 	TAILQ_INIT(ial);
-	if (dhcp6_add_listval(ial, DHCP6_LISTVAL_IAPD, iaparam, &pl) == NULL)
+	if (dhcp6_add_listval(ial, DHCP6_LISTVAL_IAPD, iaparam, &pl) == NULL) {
 		goto fail;
+	}
 	dhcp6_clear_list(&pl);
 
 	evd->type = DHCP6_EVDATA_IAPD;
@@ -354,10 +373,11 @@ renew_prefix(struct iactl *iac, struct dhcp6_ia *iaparam,
 
 	return (0);
 
-  fail:
+fail:
 	dhcp6_clear_list(&pl);
-	if (ial)
+	if (ial) {
 		free(ial);
+	}
 	return (-1);
 }
 
@@ -456,15 +476,18 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 	/* copy prefix and SLA ID */
 	a = &ifpfx->paddr.sin6_addr;
 	b = prefix->plen;
-	for (i = 0, b = prefix->plen; b > 0; b -= 8, i++)
+	for (i = 0, b = prefix->plen; b > 0; b -= 8, i++) {
 		a->s6_addr[i] = prefix->addr.s6_addr[i];
+	}
 	sla_id = htonl(pconf->sla_id);
 	sp = ((char *)&sla_id + 3);
 	i = (128 - pconf->ifid_len) / 8;
-	for (b = pconf->sla_len; b > 7; b -= 8, sp--)
+	for (b = pconf->sla_len; b > 7; b -= 8, sp--) {
 		a->s6_addr[--i] = *sp;
-	if (b)
+	}
+	if (b) {
 		a->s6_addr[--i] |= *sp;
+	}
 
 #ifndef ND6_INFINITE_LIFETIME
 #define ND6_INFINITE_LIFETIME 0xffffffff
@@ -473,38 +496,39 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 	/* fill prefix info from siteprefix except plen done earlier */
 	ifpfx->pinfo.addr = siteprefix->prefix.addr;
 	ifpfx->pinfo.pltime = siteprefix->prefix.pltime;
-	if (!ifpfx->pinfo.pltime || opt_norelease)
+	if (!ifpfx->pinfo.pltime || opt_norelease) {
 		ifpfx->pinfo.pltime = ND6_INFINITE_LIFETIME;
+	}
 	ifpfx->pinfo.vltime = siteprefix->prefix.vltime;
-	if (!ifpfx->pinfo.vltime || opt_norelease)
+	if (!ifpfx->pinfo.vltime || opt_norelease) {
 		ifpfx->pinfo.vltime = ND6_INFINITE_LIFETIME;
+	}
 
 	/* configure the corresponding address */
 	ifpfx->ifaddr = ifpfx->paddr;
-	for (i = 15; i >= pconf->ifid_len / 8; i--)
+	for (i = 15; i >= pconf->ifid_len / 8; i--) {
 		ifpfx->ifaddr.sin6_addr.s6_addr[i] = pconf->ifid[i];
-	if (pd_ifaddrconf(IFADDRCONF_ADD, ifpfx))
+	}
+	if (pd_ifaddrconf(IFADDRCONF_ADD, ifpfx)) {
 		goto bad;
-
-	/* TODO: send a control message for other processes */
+	}
 
 	TAILQ_INSERT_TAIL(&siteprefix->ifprefix_list, ifpfx, plink);
 
 	return (0);
 
-  bad:
-	if (ifpfx)
+bad:
+	if (ifpfx) {
 		free(ifpfx);
+	}
+
 	return (-1);
 }
 
 static int
 pd_ifaddrconf(ifaddrconf_cmd_t cmd, struct dhcp6_ifprefix *ifpfx)
 {
-	struct prefix_ifconf *pconf;
-
-	pconf = ifpfx->ifconf;
-	return (ifaddrconf(cmd, pconf->ifname, &ifpfx->ifaddr,
+	return (ifaddrconf(cmd, ifpfx->ifconf->ifname, &ifpfx->ifaddr,
 	    ifpfx->pinfo.plen,
 	    ifpfx->pinfo.vltime /* intentionally avoid deprecation */,
 #define ND6_GRACEPERIOD_LIFETIME 60

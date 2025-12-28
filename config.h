@@ -326,17 +326,14 @@ struct dhcp6_if *find_ifconfbyname(char *);
 struct dhcp6_if *find_ifconfbyid(unsigned int);
 struct host_conf *find_hostconf(struct duid *);
 struct authinfo *find_authinfo(struct authinfo *, char *);
-struct dhcp6_prefix *find_prefix6(struct dhcp6_list *,
-					      struct dhcp6_prefix *);
+struct dhcp6_prefix *find_prefix6(struct dhcp6_list *, struct dhcp6_prefix *);
 struct ia_conf *find_iaconf(struct ia_conflist *, int, uint32_t);
 struct keyinfo *find_key(char *, size_t, uint32_t);
 int configure_pool(struct cf_namelist *);
 struct pool_conf *find_pool(const char *);
 int is_available_in_pool(struct pool_conf *, struct in6_addr *);
-int get_free_address_from_pool(struct pool_conf *,
-	struct in6_addr *);
-struct host_conf *create_dynamic_hostconf(struct duid *,
-	struct dhcp6_poolspec *);
+int get_free_address_from_pool(struct pool_conf *, struct in6_addr *);
+struct host_conf *create_dynamic_hostconf(struct duid *, struct dhcp6_poolspec *);
 char *qstrdup(char *);
 
 #endif

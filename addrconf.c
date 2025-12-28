@@ -97,9 +97,7 @@ static void cleanup_addr(struct iactl *);
 static int renew_addr(struct iactl *, struct dhcp6_ia *,
     struct dhcp6_eventdata **, struct dhcp6_eventdata *);
 static void na_renew_data_free(struct dhcp6_eventdata *);
-
 static struct dhcp6_timer *addr_timo(void *);
-
 static int na_ifaddrconf(ifaddrconf_cmd_t, struct statefuladdr *);
 
 int
@@ -162,17 +160,20 @@ update_address(struct ia *ia, struct dhcp6_statefuladdr *addr,
 	/* update the timestamp of update */
 	sa->updatetime = time(NULL);
 
-	/* update the prefix according to addr */
+	/* update the address */
 	sa->addr.pltime = addr->pltime;
 	sa->addr.vltime = addr->vltime;
 	sa->dhcpif = dhcpifp;
+
 	d_printf(LOG_DEBUG, FNAME, "%s an address %s pltime=%" PRIu32
 	    ", vltime=%" PRIu32, sacreate ? "create" : "update",
 	    in6addr2str(&addr->addr, 0), addr->pltime, addr->vltime);
 
-	if (sa->addr.vltime != 0)
-		if (na_ifaddrconf(IFADDRCONF_ADD, sa) < 0)
+	if (sa->addr.vltime != 0) {
+		if (na_ifaddrconf(IFADDRCONF_ADD, sa) < 0) {
 			return (-1);
+		}
+	}
 
 	/*
 	 * If the new vltime is 0, this address immediately expires.

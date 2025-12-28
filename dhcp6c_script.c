@@ -1,5 +1,3 @@
-/*	$KAME: dhcp6c_script.c,v 1.11 2004/11/28 10:48:38 jinmei Exp $	*/
-
 /*
  * Copyright (C) 2003 WIDE Project.
  * Copyright (C) 2023-2025 Franco Fichtner <franco@opnsense.org>
@@ -8,6 +6,7 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
+ *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright

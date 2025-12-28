@@ -1,5 +1,3 @@
-/*	$KAME: cftoken.l,v 1.35 2005/01/12 06:06:11 suz Exp $	*/
-
 %option noyywrap
 %option noinput
 %{
@@ -10,6 +8,7 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
+ *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -31,6 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>

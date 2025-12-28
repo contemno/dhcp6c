@@ -1,5 +1,3 @@
-/*	$KAME: auth.c,v 1.4 2004/09/07 05:03:02 jinmei Exp $	*/
-
 /*
  * Copyright (C) 2004 WIDE Project.
  * All rights reserved.
@@ -7,6 +5,7 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
+ *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -45,6 +44,7 @@
  * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/socket.h>

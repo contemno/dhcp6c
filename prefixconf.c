@@ -83,6 +83,8 @@ struct iactl_pd {
 #define ND6_INFINITE_LIFETIME 0xffffffff
 #endif
 
+#define ND6_GRACEPERIOD_LIFETIME 60
+
 #define UPDATE_LEASETIME(pip, sp)	do { \
 	(pip)->pltime = (sp)->prefix.pltime; \
 	if (!(pip)->pltime || opt_norelease) { \
@@ -525,6 +527,5 @@ pd_ifaddrconf(ifaddrconf_cmd_t cmd, struct dhcp6_ifprefix *pip)
 {
 	return (ifaddrconf(cmd, pip->ifconf->ifname, &pip->ifaddr,
 	    pip->plen, pip->vltime /* intentionally avoid deprecation */,
-#define ND6_GRACEPERIOD_LIFETIME 60
 	    pip->vltime + ND6_GRACEPERIOD_LIFETIME));
 }

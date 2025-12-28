@@ -84,13 +84,13 @@ struct iactl_pd {
 #endif
 
 #define UPDATE_LEASETIME(pip, sp)	do { \
-	(pip)->pinfo.pltime = (sp)->prefix.pltime; \
-	if (!(pip)->pinfo.pltime || opt_norelease) { \
-		(pip)->pinfo.pltime = ND6_INFINITE_LIFETIME; \
+	(pip)->pltime = (sp)->prefix.pltime; \
+	if (!(pip)->pltime || opt_norelease) { \
+		(pip)->pltime = ND6_INFINITE_LIFETIME; \
 	} \
-	(pip)->pinfo.vltime = (sp)->prefix.vltime; \
-	if (!(pip)->pinfo.vltime || opt_norelease) { \
-		(pip)->pinfo.vltime = ND6_INFINITE_LIFETIME; \
+	(pip)->vltime = (sp)->prefix.vltime; \
+	if (!(pip)->vltime || opt_norelease) { \
+		(pip)->vltime = ND6_INFINITE_LIFETIME; \
 	} \
 } while (0);
 
@@ -112,9 +112,9 @@ struct dhcp6_ifprefix {
 
 	/* interface prefix parameters */
 	struct sockaddr_in6 paddr;
-
-	/* prefix information */
-	struct dhcp6_prefix pinfo;
+	uint32_t pltime;
+	uint32_t vltime;
+	int plen;
 
 	/* address assigned on the interface based on the prefix */
 	struct sockaddr_in6 ifaddr;
@@ -465,7 +465,7 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 		pif->sla_len = 128 - pif->ifid_len - prefix->plen;
 	}
 
-	pip->pinfo.plen = prefix->plen + pif->sla_len;
+	pip->plen = prefix->plen + pif->sla_len;
 	/*
 	 * XXX: our current implementation assumes ifid len is a multiple of 8
 	 */
@@ -474,11 +474,10 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 		    "assumption failure on the length of interface ID");
 		goto bad;
 	}
-	if (pip->pinfo.plen + pif->ifid_len < 0 ||
-	    pip->pinfo.plen + pif->ifid_len > 128) {
+	if (pip->plen + pif->ifid_len < 0 || pip->plen + pif->ifid_len > 128) {
 		d_printf(LOG_INFO, FNAME,
-			"invalid prefix length %d + %d + %d",
-			prefix->plen, pif->sla_len, pif->ifid_len);
+		    "invalid prefix length %d + %d + %d",
+		    prefix->plen, pif->sla_len, pif->ifid_len);
 		goto bad;
 	}
 
@@ -498,8 +497,6 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 		a->s6_addr[--i] |= *sp;
 	}
 
-	/* fill prefix info from siteprefix except plen done earlier */
-	pip->pinfo.addr = siteprefix->prefix.addr;
 	UPDATE_LEASETIME(pip, siteprefix);
 
 	/* configure the corresponding address */
@@ -527,8 +524,7 @@ static int
 pd_ifaddrconf(ifaddrconf_cmd_t cmd, struct dhcp6_ifprefix *pip)
 {
 	return (ifaddrconf(cmd, pip->ifconf->ifname, &pip->ifaddr,
-	    pip->pinfo.plen,
-	    pip->pinfo.vltime /* intentionally avoid deprecation */,
+	    pip->plen, pip->vltime /* intentionally avoid deprecation */,
 #define ND6_GRACEPERIOD_LIFETIME 60
-	    pip->pinfo.vltime + ND6_GRACEPERIOD_LIFETIME));
+	    pip->vltime + ND6_GRACEPERIOD_LIFETIME));
 }

@@ -30,7 +30,7 @@ Improvements made over the years by OPNsense, Debian and FreeBSD:
 - "-n" flag to prevent address release from being sent to the DHCP server upon restart
 - Reload the client configuration on SIGHUP
 - Removed all unused binaries except dhcp6c
-- Raw option send and receive support
+- Raw DHCP option configuration support using hex notation
 - PDINFO delegated prefixes environment variable
 - Accept interfaces from the configuration file
 - Allow assigning the prefix to the WAN interface
@@ -42,6 +42,8 @@ Improvements made over the years by OPNsense, Debian and FreeBSD:
 - Timing parameter updates according to RFC 8415, Section 7.6
 - Use the PID file to safely check for running process
 - Use lease timings for prefixes so they can expire in the OS
+- Support raw_dhcp_option_nnnnnn environment variables hex notation for unknown received options
+- Support new_aftr_name environment variable
 - NAINFO configured address environment variable
 
 Bug Reports and patch submissions

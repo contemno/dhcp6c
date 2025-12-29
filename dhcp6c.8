@@ -235,6 +235,13 @@ each of which is an IPv6 numeric address and is separated by a white
 space character.
 .It Ic new_bcmcs_name
 A list of BCMCS server domain names.
+.It Ic new_aftr_name
+A list of Address Family Transition Router
+.Pq AFTR
+domain names.
+As per RFC6334 only the first one is valid and must be resolved
+using the DNS server specified via
+.Ic new_domain_name_servers .
 .El
 .Pp
 Note that the daemon does not always provide all the parameters.

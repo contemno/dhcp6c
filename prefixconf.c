@@ -134,6 +134,7 @@ static void renew_data_free(struct dhcp6_eventdata *);
 static struct dhcp6_timer *siteprefix_timo(void *);
 static int add_ifprefix(struct siteprefix *,
     struct dhcp6_prefix *, struct prefix_ifconf *);
+static int mod_ifprefix(struct siteprefix *, struct dhcp6_ifprefix *);
 static int pd_ifaddrconf(ifaddrconf_cmd_t, struct dhcp6_ifprefix *);
 
 int
@@ -216,14 +217,11 @@ update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
 	if (sp->prefix.vltime != 0) {
 		if (spcreate) {
 			TAILQ_FOREACH(pif, iac_pd->pifc_head, link) {
-				/* XXX failures are ignored */
 				add_ifprefix(sp, pinfo, pif);
 			}
 		} else {
 			TAILQ_FOREACH(pip, &sp->ifprefix_list, plink) {
-				UPDATE_LEASETIME(pip, sp);
-				/* XXX failures are ignored */
-				pd_ifaddrconf(IFADDRCONF_ADD, pip);
+				mod_ifprefix(sp, pip);
 			}
 		}
 	}
@@ -508,6 +506,7 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 		pip->ifaddr.sin6_addr.s6_addr[i] = pif->ifid[i];
 	}
 	if (pd_ifaddrconf(IFADDRCONF_ADD, pip)) {
+		/* XXX failures are ignored */
 		goto bad;
 	}
 
@@ -521,6 +520,19 @@ bad:
 	}
 
 	return (-1);
+}
+
+static int
+mod_ifprefix(struct siteprefix *siteprefix, struct dhcp6_ifprefix *pip)
+{
+	UPDATE_LEASETIME(pip, siteprefix);
+
+	if (pd_ifaddrconf(IFADDRCONF_ADD, pip)) {
+		/* XXX failures are ignored */
+		return (-1);
+	}
+
+	return (0);
 }
 
 static int

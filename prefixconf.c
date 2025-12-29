@@ -142,6 +142,7 @@ update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
     struct iactl **ctlp, void (*callback)(struct ia *))
 {
 	struct iactl_pd *iac_pd = (struct iactl_pd *)*ctlp;
+	struct dhcp6_ifprefix *pip;
 	struct prefix_ifconf *pif;
 	struct siteprefix *sp;
 	struct timeval timo;
@@ -214,16 +215,12 @@ update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
 	/* update prefix interfaces if necessary */
 	if (sp->prefix.vltime != 0) {
 		if (spcreate) {
-			for (pif = TAILQ_FIRST(iac_pd->pifc_head); pif;
-			    pif = TAILQ_NEXT(pif, link)) {
+			TAILQ_FOREACH(pif, iac_pd->pifc_head, link) {
 				/* XXX failures are ignored */
 				add_ifprefix(sp, pinfo, pif);
 			}
 		} else {
-			struct dhcp6_ifprefix *pip;
-
-			for (pip = TAILQ_FIRST(&sp->ifprefix_list); pip; \
-			    pip = TAILQ_NEXT(pip, plink)) {
+			TAILQ_FOREACH(pip, &sp->ifprefix_list, plink) {
 				UPDATE_LEASETIME(pip, sp);
 				/* XXX failures are ignored */
 				pd_ifaddrconf(IFADDRCONF_ADD, pip);
@@ -270,11 +267,13 @@ find_siteprefix(struct siteprefix_list *head, struct dhcp6_prefix *prefix,
 {
 	struct siteprefix *sp;
 
-	for (sp = TAILQ_FIRST(head); sp; sp = TAILQ_NEXT(sp, link)) {
-		if (!IN6_ARE_ADDR_EQUAL(&sp->prefix.addr, &prefix->addr))
+	TAILQ_FOREACH(sp, head, link) {
+		if (!IN6_ARE_ADDR_EQUAL(&sp->prefix.addr, &prefix->addr)) {
 			continue;
-		if (match_plen == 0 || sp->prefix.plen == prefix->plen)
+		}
+		if (match_plen == 0 || sp->prefix.plen == prefix->plen) {
 			return (sp);
+		}
 	}
 
 	return (NULL);
@@ -308,8 +307,10 @@ isvalid(struct iactl *iac)
 {
 	struct iactl_pd *iac_pd = (struct iactl_pd *)iac;
 
-	if (TAILQ_EMPTY(&iac_pd->siteprefix_head))
+	if (TAILQ_EMPTY(&iac_pd->siteprefix_head)) {
 		return (0);	/* this IA is invalid */
+	}
+
 	return (1);
 }
 

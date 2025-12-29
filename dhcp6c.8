@@ -242,6 +242,10 @@ domain names.
 As per RFC6334 only the first one is valid and must be resolved
 using the DNS server specified via
 .Ic new_domain_name_servers .
+.It Ic new_raw_option_nnnnn
+Exposes a hex representation of unknown options sent by the server.
+Repeated options are currently overlapping so only the last one is
+readable.
 .El
 .Pp
 Note that the daemon does not always provide all the parameters.

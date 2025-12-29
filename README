@@ -42,7 +42,7 @@ Improvements made over the years by OPNsense, Debian and FreeBSD:
 - Timing parameter updates according to RFC 8415, Section 7.6
 - Use the PID file to safely check for running process
 - Use lease timings for prefixes so they can expire in the OS
-- Support raw_dhcp_option_nnnnnn environment variables hex notation for unknown received options
+- Support new_raw_option_nnnnn environment variables hex notation for unknown received options
 - Support new_aftr_name environment variable
 - NAINFO configured address environment variable
 

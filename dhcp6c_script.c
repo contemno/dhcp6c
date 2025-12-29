@@ -187,9 +187,9 @@
 			 * max of 5 numbers after last underscore \
 			 * (seems like max DHCPv6 option could be 65535) \
 			 * then underscore, equal sign and null char plus \
-			 * hex signs of each byte and "0x" \
+			 * hex signs of each byte \
 			 */ \
-			int slen = sizeof(lstr) + 5 + 3 + (rawopt->datalen * 2) + 2; \
+			int slen = sizeof(lstr) + 5 + 3 + (rawopt->datalen * 2); \
 			char *sptr; \
 			if ((sptr = envp[i++] = malloc(slen)) == NULL) { \
 				d_printf(LOG_NOTICE, FNAME, \
@@ -198,8 +198,9 @@
 				ret = -1; \
 				goto clean; \
 			} \
-			/* make raw options available as lstr_abcdef=0xhexresponse */ \
-			snprintf(sptr, slen, "%s_%d=0x", lstr, rawopt->opnum); \
+			/* make raw options available as lstr_abcde=hexresponse */ \
+			/* XXX creates and overwrites %d for repeated options */ \
+			snprintf(sptr, slen, "%s_%d=", lstr, rawopt->opnum); \
 			for (o = 0; o < rawopt->datalen; o++) { \
 				val[0] = hex[(rawopt->data[o]>>4) & 0x0F]; \
 				val[1] = hex[(rawopt->data[o]   ) & 0x0F]; \
@@ -284,7 +285,7 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	RENDER_ADDR("new_bcmcs_servers", bcmcs);
 	RENDER_NAME("new_bcmcs_name", bcmcsname);
 	RENDER_NAME("new_aftr_name", aftrname);
-	RENDER_RAWOPT("raw_dhcp_option", rawopt);
+	RENDER_RAWOPT("new_raw_option", rawopt); /* XXX does not handle option duplication */
 
 	/* launch the script */
 	pid = fork();

@@ -1919,8 +1919,11 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 			}
 			memcpy(rawop->data, cp, rawop->datalen);
 
+			/*
+			 * Adding all unknown but also adding
+			 * overlaps for repeated options.
+			 */
 			TAILQ_INSERT_TAIL(&optinfo->rawopt_list, rawop, link);
-
 			break;
 		}
 	}

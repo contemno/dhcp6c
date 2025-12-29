@@ -80,8 +80,7 @@
 
 #define COUNT_LIST(lname, lip)	do { \
 	struct dhcp6_listval *v; \
-	for (v = TAILQ_FIRST(&optinfo->lname##_list); v; \
-	    v = TAILQ_NEXT(v, link)) { \
+	TAILQ_FOREACH(v, &optinfo->lname##_list, link) { \
 		/* one space separator plus address length or as is */ \
 		lname##_len += 1 + ((lip) ? INET6_ADDRSTRLEN : lname##_len); \
 	} \
@@ -105,8 +104,7 @@
 		} \
 		memset(sptr, 0, slen); \
 		snprintf(sptr, slen, "%s=", lstr); \
-		for (v = TAILQ_FIRST(&optinfo->lname##_list); v; \
-		    v = TAILQ_NEXT(v, link)) { \
+		TAILQ_FOREACH(v, &optinfo->lname##_list, link) { \
 			strlcat(sptr, (lip) ? in6addr2str(&v->val_addr6, 0) : \
 			    v->val_vbuf.dv_buf, slen); \
 			strlcat(sptr, " ", slen); \
@@ -119,10 +117,8 @@
 
 #define COUNT_PREFIX(lname)	do { \
 	struct dhcp6_listval *iav, *siav; \
-	for (iav = TAILQ_FIRST(&optinfo->lname##_list); iav; \
-	    iav = TAILQ_NEXT(iav, link)) { \
-		for (siav = TAILQ_FIRST(&iav->sublist); siav; \
-		    siav = TAILQ_NEXT(siav, link)) { \
+	TAILQ_FOREACH(iav, &optinfo->lname##_list, link) { \
+		TAILQ_FOREACH(siav, &iav->sublist, link) { \
 			if (siav->type == DHCP6_LISTVAL_PREFIX6) { \
 				/* one space separator plus prefix length max */ \
 				lname##_len += 1 + PDINFO_MAX; \
@@ -146,10 +142,8 @@
 		} \
 		memset(sptr, 0, slen); \
 		snprintf(sptr, slen, "%s=", lstr); \
-		for (iav = TAILQ_FIRST(&optinfo->lname##_list); iav; \
-		    iav = TAILQ_NEXT(iav, link)) { \
-			for (siav = TAILQ_FIRST(&iav->sublist); siav; \
-			    siav = TAILQ_NEXT(siav, link)) { \
+		TAILQ_FOREACH(iav, &optinfo->lname##_list, link) { \
+			TAILQ_FOREACH(siav, &iav->sublist, link) { \
 				if (siav->type == DHCP6_LISTVAL_PREFIX6) { \
 					snprintf(prefixinfo, sizeof(prefixinfo), \
 					    "%s/%d", in6addr2str(&siav->val_prefix6.addr, 0), \
@@ -164,8 +158,7 @@
 
 #define COUNT_RAWOPT(lname)	do { \
 	struct rawoption *rawopt; \
-	for (rawopt = TAILQ_FIRST(&optinfo->lname##_list); rawopt; \
-	    rawopt = TAILQ_NEXT(rawopt, link)) { \
+	TAILQ_FOREACH(rawopt, &optinfo->lname##_list, link) { \
 		lname##_len += 1; \
 	} \
 	envc += lname##_len; \
@@ -177,8 +170,7 @@
 		struct rawoption *rawopt; \
 		char val[3]; \
 		int o; \
-		for (rawopt = TAILQ_FIRST(&optinfo->lname##_list); rawopt; \
-		    rawopt = TAILQ_NEXT(rawopt, link)) { \
+		TAILQ_FOREACH(rawopt, &optinfo->lname##_list, link) { \
 			/* \
 			 * max of 5 numbers after last underscore \
 			 * (seems like max DHCPv6 option could be 65535) \

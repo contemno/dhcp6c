@@ -1597,15 +1597,11 @@ find_server(struct dhcp6_event *ev, struct duid *duid)
 }
 
 #define PRINT_LIST(lname, lstr, lip)	do { \
-	if (!TAILQ_EMPTY(&optinfo->lname##_list)) { \
-		struct dhcp6_listval *d; \
-		int i = 0; \
-		for (d = TAILQ_FIRST(&optinfo->lname##_list); d; \
-		     d = TAILQ_NEXT(d, link), i++) { \
-			info_printf("%s[%d] %s", (lstr), \
-			    i, (lip) ? in6addr2str(&d->val_addr6, 0) : \
-			    d->val_vbuf.dv_buf); \
-		} \
+	struct dhcp6_listval *d; \
+	int i = 0; \
+	TAILQ_FOREACH(d, &optinfo->lname##_list, link) { \
+		info_printf("%s[%d] %s", (lstr), i++, (lip) ? \
+		    in6addr2str(&d->val_addr6, 0) : d->val_vbuf.dv_buf); \
 	} \
 } while (0)
 

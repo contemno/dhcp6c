@@ -171,6 +171,7 @@ update_address(struct ia *ia, struct dhcp6_statefuladdr *addr,
 
 	if (sa->addr.vltime != 0) {
 		if (na_ifaddrconf(IFADDRCONF_ADD, sa) < 0) {
+			/* XXX no reporting here either */
 			return (-1);
 		}
 	}

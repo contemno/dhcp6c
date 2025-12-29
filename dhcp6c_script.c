@@ -115,11 +115,11 @@
 #define RENDER_ADDR(lstr, lname)	RENDER_LIST(lstr, lname, 1)
 #define RENDER_NAME(lstr, lname)	RENDER_LIST(lstr, lname, 0)
 
-#define COUNT_PREFIX(lname)	do { \
+#define COUNT_IA(lname, ltype)	do { \
 	struct dhcp6_listval *iav, *siav; \
 	TAILQ_FOREACH(iav, &optinfo->lname##_list, link) { \
 		TAILQ_FOREACH(siav, &iav->sublist, link) { \
-			if (siav->type == DHCP6_LISTVAL_PREFIX6) { \
+			if (siav->type == (ltype)) { \
 				/* one space separator plus prefix length max */ \
 				lname##_len += 1 + PDINFO_MAX; \
 			} \
@@ -128,7 +128,10 @@
 	envc += lname##_len ? 1 : 0; \
 } while (0)
 
-#define RENDER_PREFIX(lstr, lname)	do { \
+#define COUNT_IANA(lname)	COUNT_IA(lname, DHCP6_LISTVAL_STATEFULADDR6)
+#define COUNT_IAPD(lname)	COUNT_IA(lname, DHCP6_LISTVAL_PREFIX6)
+
+#define RENDER_IA(lstr, lname, ltype)	do { \
 	if (lname##_len) { \
 		struct dhcp6_listval *iav, *siav; \
 		char prefixinfo[PDINFO_MAX]; \
@@ -144,17 +147,26 @@
 		snprintf(sptr, slen, "%s=", lstr); \
 		TAILQ_FOREACH(iav, &optinfo->lname##_list, link) { \
 			TAILQ_FOREACH(siav, &iav->sublist, link) { \
+				if (siav->type != (ltype)) { \
+					continue; \
+				} \
 				if (siav->type == DHCP6_LISTVAL_PREFIX6) { \
 					snprintf(prefixinfo, sizeof(prefixinfo), \
 					    "%s/%d", in6addr2str(&siav->val_prefix6.addr, 0), \
 					    siav->val_prefix6.plen); \
 					strlcat(sptr, prefixinfo, slen); \
 					strlcat(sptr, " ", slen); \
+				} else if (siav->type == DHCP6_LISTVAL_STATEFULADDR6) { \
+					snprintf(prefixinfo, sizeof(prefixinfo), \
+					    "%s/128", in6addr2str(&siav->val_statefuladdr6.addr, 0)); \
 				} \
 			} \
 		} \
 	} \
 } while (0)
+
+#define RENDER_IANA(lstr, lname)	RENDER_IA(lstr, lname, DHCP6_LISTVAL_STATEFULADDR6)
+#define RENDER_IAPD(lstr, lname)	RENDER_IA(lstr, lname, DHCP6_LISTVAL_PREFIX6)
 
 #define COUNT_RAWOPT(lname)	do { \
 	struct rawoption *rawopt; \
@@ -206,6 +218,7 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	char **envp;
 	pid_t pid, wpid;
 
+	DECLARE_LEN(iana);
 	DECLARE_LEN(iapd);
 	DECLARE_LEN(dns);
 	DECLARE_LEN(dnsname);
@@ -230,7 +243,8 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 
 	/* full environment only during runtime */
 	if (state != DHCP6S_EXIT) {
-		COUNT_PREFIX(iapd);
+		COUNT_IANA(iana);
+		COUNT_IAPD(iapd);
 		COUNT_ADDR(dns);
 		COUNT_NAME(dnsname);
 		COUNT_ADDR(ntp);
@@ -256,7 +270,8 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	i = 0;
 
 	RENDER_REASON("REASON");
-	RENDER_PREFIX("PDINFO", iapd);
+	RENDER_IANA("NAINFO", iana);
+	RENDER_IAPD("PDINFO", iapd);
 	RENDER_ADDR("new_domain_name_servers", dns);
 	RENDER_NAME("new_domain_name", dnsname);
 	RENDER_ADDR("new_ntp_servers", ntp);

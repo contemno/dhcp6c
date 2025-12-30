@@ -30,14 +30,11 @@
 .Dd June 7, 2024
 .Dt DHCP6C.CONF 5
 .Os KAME
-.\"
 .Sh NAME
 .Nm dhcp6c.conf
 .Nd DHCPv6 client configuration file
-.\"
 .Sh SYNOPSIS
 .Pa /usr/local/etc/dhcp6c.conf
-.\"
 .Sh DESCRIPTION
 The
 .Nm
@@ -59,12 +56,12 @@ Interfaces are specified in the form of "name unit", such as
 .Ar fxp0
 and
 .Ar gif1.
-.\"
 .Sh DHCPv6 options
 Some configuration statements take the description of a DHCPv6 option
 as an argument.
 The followings are the format and description of available DHCPv6
 options.
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ic domain-name-servers
@@ -140,11 +137,11 @@ statement for
 .Ar authname
 must be provided.
 .El
-.\"
 .Sh Interface statement
 An interface statement specifies configuration parameters on the
 interface.
 The generic format of an interface statement is as follows:
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ic interface Ar interface
@@ -155,6 +152,7 @@ The generic format of an interface statement is as follows:
 The followings are possible
 .Ar substatements
 in an interface statement.
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ic send Ar send-options
@@ -208,6 +206,7 @@ option-request option.
 .Ar request-options
 is a comma-separated list of options,
 which can consist of the following options.
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ic domain-name-servers
@@ -287,7 +286,6 @@ must be the absolute path from root to the script file, be a regular
 file, and be created by the same owner who runs the daemon.
 .El
 .El
-.\"
 .Sh Identity association statement
 Identity association
 .Pq IA
@@ -300,6 +298,7 @@ An IA is associated with configuration information dependent on the IA type.
 An identity association statement defines a single IA with some
 client-side configuration parameters.
 Its format is as follows:
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ic id-assoc Ar type Op Ar ID
@@ -325,37 +324,8 @@ Each statement may or may not be specific to the type of IA.
 The followings are possible
 .Ar substatements
 for an IA of type
-.Ic na .
-.Bl -tag -width Ds -compact
-.It Xo
-.Ic address Ar ipv6-address pltime Op Ar vltime ;
-.Xc
-specifies an address and related parameters that the client wants to be
-allocated.
-Multiple addresses can be specified, each of which is described as a
-separate
-.Ic address
-substatement.
-.Nm dhcp6c
-will include all the addresses
-.Pq and related parameters
-in Solicit messages,
-as an IA_NA prefix option encapsulated in the corresponding IA_NA
-option.
-Note, however, that the server may or may not respect the specified
-prefix parameters.
-For parameters of the
-.Ic address
-substatement,
-see
-.\" XXX apparently not
-.Xr dhcp6s.conf 5 .
-.El
-.Pp
-The followings are possible
-.Ar substatements
-for an IA of type
 .Ic pd .
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ar prefix_interface_statement
@@ -385,8 +355,38 @@ see
 .\" XXX apparently not
 .Xr dhcp6s.conf 5 .
 .El
+.Pp
+The followings are possible
+.Ar substatements
+for an IA of type
+.Ic na .
+.Pp
+.Bl -tag -width Ds -compact
+.It Xo
+.Ic address Ar ipv6-address pltime Op Ar vltime ;
+.Xc
+specifies an address and related parameters that the client wants to be
+allocated.
+Multiple addresses can be specified, each of which is described as a
+separate
+.Ic address
+substatement.
+.Nm dhcp6c
+will include all the addresses
+.Pq and related parameters
+in Solicit messages,
+as an IA_NA prefix option encapsulated in the corresponding IA_NA
+option.
+Note, however, that the server may or may not respect the specified
+prefix parameters.
+For parameters of the
+.Ic address
+substatement,
+see
+.\" XXX apparently not
+.Xr dhcp6s.conf 5 .
 .El
-.\"
+.El
 .Sh Prefix interface statement
 A prefix interface statement specifies configuration parameters of
 prefixes on local interfaces that are derived from delegated prefixes.
@@ -394,6 +394,7 @@ A prefix interface statement can only appear as a substatement of
 an identity association statement with the type
 .Ic pd .
 The generic format of an interface statement is as follows:
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ic prefix-interface Ar interface
@@ -409,6 +410,7 @@ unless the interface receives the DHCPv6 message that contains the prefix
 with the delegated prefix and the parameters provided in
 .Ar substatements .
 Possible substatements are as follows:
+.Pp
 .Bl -tag -width Ds -compact
 .It Ic sla-id Ar ID ;
 This statement specifies the identifier value of the site-level aggregator
@@ -455,11 +457,11 @@ will be used, and if it fails the client will fall back to
 to allow operation for interfaces without a hardware address.
 .El
 .El
-.\"
 .Sh Authentication statement
 An authentication statement defines a set of authentication parameters
 used in DHCPv6 exchanges with the server(s).
 The format of an authentication statement is as follows:
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ic authentication Ar authname
@@ -478,6 +480,7 @@ statement.
 Possible substatements of the
 .Ic authentication
 statement are as follows:
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ic protocol Ar authprotocol
@@ -521,11 +524,11 @@ in which case
 will be used as the method.
 .El
 .El
-.\"
 .Sh Keyinfo statement
 A keyinfo statement defines a secret key shared with the server(s)
 to authenticate DHCPv6 messages.
 The format of a keyinfo statement is as follows:
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ic keyinfo Ar keyname
@@ -540,6 +543,7 @@ of log messages.
 Possible substatements of the
 .Ic keyinfo
 statement are as follows:
+.Pp
 .Bl -tag -width Ds -compact
 .It Xo
 .Ic realm Ar \(dqrealmname\(dq
@@ -601,7 +605,6 @@ in which case
 will be used by default.
 .El
 .El
-.\"
 .Sh Examples
 The followings are a sample configuration to be delegated an IPv6
 prefix from an upstream service provider.
@@ -678,7 +681,6 @@ interface fxp0 {
 .Ed
 .Sh SEE ALSO
 .Xr dhcp6c 8
-.\"
 .Sh HISTORY
 The
 .Nm

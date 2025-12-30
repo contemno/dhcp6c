@@ -120,9 +120,9 @@ int
 rawop_count_list(struct rawop_list *head)
 {
 	struct rawoption *op;
-	int i;
+	int i = 0;
 
-	for (i = 0, op = TAILQ_FIRST(head); op; op = TAILQ_NEXT(op, link)) {
+	TAILQ_FOREACH(op, head, link) {
 		i++;
 	}
 
@@ -142,7 +142,6 @@ rawop_clear_list(struct rawop_list *head)
 		}
 		free(op);
 	}
-	return;
 }
 
 int
@@ -150,7 +149,7 @@ rawop_copy_list(struct rawop_list *dst, struct rawop_list *src)
 {
 	struct rawoption *op, *newop;
 
-	for (op = TAILQ_FIRST(src); op; op = TAILQ_NEXT(op, link)) {
+	TAILQ_FOREACH(op, src, link) {
 		newop = NULL;
 		if ((newop = malloc(sizeof(*newop))) == NULL) {
 			d_printf(LOG_ERR, FNAME,
@@ -173,10 +172,12 @@ rawop_copy_list(struct rawop_list *dst, struct rawop_list *src)
 
 		TAILQ_INSERT_TAIL(dst, newop, link);
 	}
+
 	return (0);
 
-  fail:
+fail:
 	rawop_clear_list(dst);
+
 	return (-1);
 }
 
@@ -196,16 +197,18 @@ dhcp6_copy_list(struct dhcp6_list *dst, struct dhcp6_list *src)
 {
 	struct dhcp6_listval *ent;
 
-	for (ent = TAILQ_FIRST(src); ent; ent = TAILQ_NEXT(ent, link)) {
+	TAILQ_FOREACH(ent, src, link) {
 		if (dhcp6_add_listval(dst, ent->type,
-		    &ent->uv, &ent->sublist) == NULL)
+		    &ent->uv, &ent->sublist) == NULL) {
 			goto fail;
+		}
 	}
 
 	return (0);
 
-  fail:
+fail:
 	dhcp6_clear_list(dst);
+
 	return (-1);
 }
 
@@ -229,18 +232,17 @@ dhcp6_clear_list(struct dhcp6_list *head)
 		TAILQ_REMOVE(head, v, link);
 		dhcp6_clear_listval(v);
 	}
-
-	return;
 }
 
 static int
 dhcp6_count_list(struct dhcp6_list *head)
 {
 	struct dhcp6_listval *v;
-	int i;
+	int i = 0;
 
-	for (i = 0, v = TAILQ_FIRST(head); v; v = TAILQ_NEXT(v, link))
+	TAILQ_FOREACH(v, head, link) {
 		i++;
+	}
 
 	return (i);
 }
@@ -269,18 +271,21 @@ dhcp6_find_listval(struct dhcp6_list *head, dhcp6_listval_type_t type,
 {
 	struct dhcp6_listval *lv;
 
-	for (lv = TAILQ_FIRST(head); lv; lv = TAILQ_NEXT(lv, link)) {
-		if (lv->type != type)
+	TAILQ_FOREACH(lv, head, link) {
+		if (lv->type != type) {
 			continue;
+		}
 
-		switch(type) {
+		switch (type) {
 		case DHCP6_LISTVAL_NUM:
-			if (lv->val_num == *(int *)val)
+			if (lv->val_num == *(int *)val) {
 				return (lv);
+			}
 			break;
 		case DHCP6_LISTVAL_STCODE:
-			if (lv->val_num16 == *(uint16_t *)val)
+			if (lv->val_num16 == *(uint16_t *)val) {
 				return (lv);
+			}
 			break;
 		case DHCP6_LISTVAL_ADDR6:
 			if (IN6_ARE_ADDR_EQUAL(&lv->val_addr6,
@@ -340,7 +345,7 @@ dhcp6_add_listval(struct dhcp6_list *head, dhcp6_listval_type_t type,
 	lv->type = type;
 	TAILQ_INIT(&lv->sublist);
 
-	switch(type) {
+	switch (type) {
 	case DHCP6_LISTVAL_NUM:
 		lv->val_num = *(int *)val;
 		break;
@@ -453,12 +458,13 @@ static int
 dhcp6_set_addr(dhcp6_listval_type_t type, struct dhcp6_list *list,
     struct dhcp6opt **p, struct dhcp6opt *optep, int *len)
 {
-	struct in6_addr *in6;
 	struct dhcp6_listval *d;
+	struct in6_addr *in6;
 	int optlen;
 
-	if (TAILQ_EMPTY(list))
+	if (TAILQ_EMPTY(list)) {
 		return 0;
+	}
 
 	optlen = dhcp6_count_list(list) * sizeof(struct in6_addr);
 	if ((in6 = malloc(optlen)) == NULL) {
@@ -467,14 +473,18 @@ dhcp6_set_addr(dhcp6_listval_type_t type, struct dhcp6_list *list,
 		    dhcp6optstr(type));
 		return -1;
 	}
-	for (d = TAILQ_FIRST(list); d; d = TAILQ_NEXT(d, link), in6++)
-		memcpy(in6, &d->val_addr6, sizeof(*in6));
+
+	TAILQ_FOREACH(d, list, link) {
+		memcpy(in6++, &d->val_addr6, sizeof(*in6));
+	}
+
 	if (copy_option(type, optlen, (char *)in6, p, optep, len) != 0) {
 		free(in6);
 		return -1;
 	}
 
 	free(in6);
+
 	return 0;
 }
 
@@ -518,30 +528,35 @@ static int
 dhcp6_set_domain(dhcp6_listval_type_t type, struct dhcp6_list *list,
     struct dhcp6opt **p, struct dhcp6opt *optep, int *len)
 {
-	int optlen = 0;
-	struct dhcp6_listval *d;
-	char *tmpbuf;
 	char name[MAXDNAME], *cp, *ep;
+	struct dhcp6_listval *d;
+	int optlen = 0;
+	char *tmpbuf;
 
-	if (TAILQ_EMPTY(list))
+	if (TAILQ_EMPTY(list)) {
 		return 0;
+	}
 
-	for (d = TAILQ_FIRST(list); d; d = TAILQ_NEXT(d, link))
+	TAILQ_FOREACH(d, list, link) {
 		optlen += (d->val_vbuf.dv_len + 1);
+	}
 
 	if (optlen == 0) {
 		return 0;
 	}
 
 	tmpbuf = NULL;
+
 	if ((tmpbuf = malloc(optlen)) == NULL) {
 		d_printf(LOG_ERR, FNAME, "memory allocation failed for "
 		    "%s domain options", dhcp6optstr(type));
 		return -1;
 	}
+
 	cp = tmpbuf;
 	ep = cp + optlen;
-	for (d = TAILQ_FIRST(list); d; d = TAILQ_NEXT(d, link)) {
+
+	TAILQ_FOREACH(d, list, link) {
 		int nlen;
 
 		nlen = dnsencode((const char *)d->val_vbuf.dv_buf,
@@ -563,10 +578,12 @@ dhcp6_set_domain(dhcp6_listval_type_t type, struct dhcp6_list *list,
 		memcpy(cp, name, nlen);
 		cp += nlen;
 	}
+
 	if (copy_option(type, cp - tmpbuf, tmpbuf, p, optep, len) != 0) {
 		free(tmpbuf);
 		return -1;
 	}
+
 	free(tmpbuf);
 
 	return 0;
@@ -630,8 +647,9 @@ dhcp6_remove_evdata(struct dhcp6_event *ev)
 
 	while ((evd = TAILQ_FIRST(&ev->data_list)) != NULL) {
 		TAILQ_REMOVE(&ev->data_list, evd, link);
-		if (evd->destructor)
+		if (evd->destructor) {
 			(*evd->destructor)(evd);
+		}
 		free(evd);
 	}
 }
@@ -1272,7 +1290,7 @@ gethwid(char *buf, int len, const char *ifname, uint16_t *hwtypep)
 		 * translate interface type to hardware type based on
 		 * http://www.iana.org/assignments/arp-parameters
 		 */
-		switch(sdl->sdl_type) {
+		switch (sdl->sdl_type) {
 		case IFT_ETHER:
 #ifdef IFT_IEEE80211
 		case IFT_IEEE80211:
@@ -2299,8 +2317,7 @@ dhcp6_set_options(int type, struct dhcp6opt *optbp,
 		}
 	}
 
-	for (op = TAILQ_FIRST(&optinfo->iana_list); op;
-	    op = TAILQ_NEXT(op, link)) {
+	TAILQ_FOREACH(op, &optinfo->iana_list, link) {
 		tmpbuf = NULL;
 		if ((optlen = copyout_option(NULL, NULL, op)) < 0) {
 			d_printf(LOG_INFO, FNAME,
@@ -2354,8 +2371,7 @@ dhcp6_set_options(int type, struct dhcp6opt *optbp,
 		}
 	}
 
-	for (stcode = TAILQ_FIRST(&optinfo->stcode_list); stcode;
-	     stcode = TAILQ_NEXT(stcode, link)) {
+	TAILQ_FOREACH(stcode, &optinfo->stcode_list, link) {
 		uint16_t code;
 
 		code = htons(stcode->val_num16);
@@ -2377,9 +2393,10 @@ dhcp6_set_options(int type, struct dhcp6opt *optbp,
 			    "memory allocation failed for options");
 			goto fail;
 		}
+
 		optlen = 0;
-		for (opt = TAILQ_FIRST(&optinfo->reqopt_list); opt;
-		     opt = TAILQ_NEXT(opt, link)) {
+
+		TAILQ_FOREACH(opt, &optinfo->reqopt_list, link) {
 			/*
 			 * Information request option can only be specified
 			 * in information-request messages.
@@ -2405,55 +2422,66 @@ dhcp6_set_options(int type, struct dhcp6opt *optbp,
 	}
 
 	if (dhcp6_set_domain(DH6OPT_SIP_SERVER_D, &optinfo->sipname_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_addr(DH6OPT_SIP_SERVER_A, &optinfo->sip_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_addr(DH6OPT_DNS, &optinfo->dns_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_domain(DH6OPT_DNSNAME, &optinfo->dnsname_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_addr(DH6OPT_NIS_SERVERS, &optinfo->nis_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_addr(DH6OPT_NISP_SERVERS, &optinfo->nisp_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_domain(DH6OPT_NIS_DOMAIN_NAME, &optinfo->nisname_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_domain(DH6OPT_NISP_DOMAIN_NAME, &optinfo->nispname_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_addr(DH6OPT_NTP, &optinfo->ntp_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_domain(DH6OPT_BCMCS_SERVER_D, &optinfo->bcmcsname_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_addr(DH6OPT_BCMCS_SERVER_A, &optinfo->bcmcs_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
 	if (dhcp6_set_domain(DH6OPT_AFTR_NAME, &optinfo->aftrname_list,
-	    &p, optep, &len) != 0)
+	    &p, optep, &len) != 0) {
 		goto fail;
+	}
 
-	for (op = TAILQ_FIRST(&optinfo->iapd_list); op;
-	    op = TAILQ_NEXT(op, link)) {
+	TAILQ_FOREACH(op, &optinfo->iapd_list, link) {
 		tmpbuf = NULL;
 		if ((optlen = copyout_option(NULL, NULL, op)) < 0) {
 			d_printf(LOG_INFO, FNAME,
@@ -2505,16 +2533,12 @@ dhcp6_set_options(int type, struct dhcp6opt *optbp,
 		}
 	}
 
-	for (rawop = TAILQ_FIRST(&optinfo->rawopt_list); rawop;
-	    rawop = TAILQ_NEXT(rawop, link)) {
-
-		d_printf(LOG_DEBUG, FNAME,
-			"  raw option %d length %d at %p",
-			rawop->opnum, rawop->datalen, (void*)rawop);
+	TAILQ_FOREACH(rawop, &optinfo->rawopt_list, link) {
+		d_printf(LOG_DEBUG, FNAME, "raw option %d length %d at %p",
+		    rawop->opnum, rawop->datalen, (void*)rawop);
 
 		if (copy_option(rawop->opnum, rawop->datalen,
-			rawop->data, &p,
-		    optep, &len) != 0) {
+		    rawop->data, &p, optep, &len) != 0) {
 			goto fail;
 		}
 	}
@@ -2696,7 +2720,7 @@ copyout_option(char *p, char *ep, struct dhcp6_listval *optval)
 		return (-1);
 
 	/* first, detect the length of the option head */
-	switch(optval->type) {
+	switch (optval->type) {
 	case DHCP6_LISTVAL_IAPD:
 		memset(&ia, 0, sizeof(ia));
 		headlen = sizeof(ia);
@@ -2746,34 +2770,41 @@ copyout_option(char *p, char *ep, struct dhcp6_listval *optval)
 	/* then, calculate the length of and/or fill in the sub-options */
 	subp = NULL;
 	sublen = 0;
-	if (p)
+	if (p) {
 		subp = p + headlen;
-	for (subov = TAILQ_FIRST(&optval->sublist); subov;
-	    subov = TAILQ_NEXT(subov, link)) {
+	}
+
+	TAILQ_FOREACH(subov, &optval->sublist, link) {
 		int s;
 
-		if ((s = copyout_option(subp, ep, subov)) < 0)
+		if ((s = copyout_option(subp, ep, subov)) < 0) {
 			return (-1);
-		if (p)
+		}
+
+		if (p) {
 			subp += s;
+		}
+
 		sublen += s;
 	}
 
 	/* finally, deal with the head part again */
 	optlen = headlen + sublen;
-	if (!p)
+	if (!p) {
 		return(optlen);
+	}
 
 	d_printf(LOG_DEBUG, FNAME, "set %s", dhcp6optstr(opttype));
-	if (ep - p < headlen) /* check it just in case */
+	if (ep - p < headlen) { /* check it just in case */
 		return (-1);
+	}
 
 	/* fill in the common part */
 	opt->dh6opt_type = htons(opttype);
 	opt->dh6opt_len = htons(optlen - sizeof(struct dhcp6opt));
 
 	/* fill in type specific fields */
-	switch(optval->type) {
+	switch (optval->type) {
 	case DHCP6_LISTVAL_IAPD:
 		ia.dh6_ia_iaid = htonl(optval->val_ia.iaid);
 		ia.dh6_ia_t1 = htonl(optval->val_ia.t1);
@@ -2827,7 +2858,7 @@ dhcp6_set_timeoparam(struct dhcp6_event *ev)
 	ev->max_retrans_dur = 0;
 	ev->max_retrans_time = 0;
 
-	switch(ev->state) {
+	switch (ev->state) {
 	case DHCP6S_SOLICIT:
 		ev->init_retrans = SOL_TIMEOUT;
 		ev->max_retrans_time = SOL_MAX_RT;
@@ -2876,7 +2907,7 @@ dhcp6_reset_timer(struct dhcp6_event *ev)
 	double n, r;
 	long d;
 
-	switch(ev->state) {
+	switch (ev->state) {
 	case DHCP6S_INIT:
 		/* same as INF_MAX_DELAY as per [RFC8415 18.2.6] */
 		ev->retrans = arc4random_uniform(SOL_MAX_DELAY);
@@ -3013,10 +3044,11 @@ dhcp6optstr(int type)
 {
 	static char genstr[sizeof("opt_65535") + 1]; /* XXX thread unsafe */
 
-	if (type > 65535)
+	if (type > 65535) {
 		return ("INVALID option");
+	}
 
-	switch(type) {
+	switch (type) {
 	case DH6OPT_CLIENTID:
 		return ("client ID");
 	case DH6OPT_SERVERID:
@@ -3108,10 +3140,11 @@ dhcp6msgstr(int type)
 {
 	static char genstr[sizeof("msg255") + 1]; /* XXX thread unsafe */
 
-	if (type > 255)
+	if (type > 255) {
 		return ("INVALID msg");
+	}
 
-	switch(type) {
+	switch (type) {
 	case DH6_SOLICIT:
 		return ("solicit");
 	case DH6_ADVERTISE:
@@ -3149,10 +3182,11 @@ dhcp6_stcodestr(uint16_t code)
 {
 	static char genstr[sizeof("code255") + 1]; /* XXX thread unsafe */
 
-	if (code > 255)
+	if (code > 255) {
 		return ("INVALID code");
+	}
 
-	switch(code) {
+	switch (code) {
 	case DH6OPT_STCODE_SUCCESS:
 		return ("success");
 	case DH6OPT_STCODE_UNSPECFAIL:
@@ -3186,12 +3220,14 @@ duidstr(struct duid *duid)
 	for (i = 0; i < duid->duid_len && i <= 128; i++) {
 		n = snprintf(cp, ep - cp, "%s%02x", i == 0 ? "" : ":",
 		    duid->duid_id[i] & 0xff);
-		if (n < 0)
+		if (n < 0) {
 			return NULL;
+		}
 		cp += n;
 	}
-	if (i < duid->duid_len)
+	if (i < duid->duid_len) {
 		snprintf(cp, ep - cp, "%s", "...");
+	}
 
 	return (duidstr);
 }
@@ -3199,7 +3235,7 @@ duidstr(struct duid *duid)
 const char *
 dhcp6_event_statestr(struct dhcp6_event *ev)
 {
-	switch(ev->state) {
+	switch (ev->state) {
 	case DHCP6S_INIT:
 		return ("INIT");
 	case DHCP6S_SOLICIT:
@@ -3307,7 +3343,7 @@ ifaddrconf(ifaddrconf_cmd_t cmd, char *ifname, struct sockaddr_in6 *addr,
 	const char *cmdstr;
 	int s;			/* XXX overhead */
 
-	switch(cmd) {
+	switch (cmd) {
 	case IFADDRCONF_ADD:
 		cmdstr = "add";
 #ifdef __KAME__

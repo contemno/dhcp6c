@@ -215,10 +215,10 @@ find_addr(struct statefuladdr_list *head, struct dhcp6_statefuladdr *addr)
 {
 	struct statefuladdr *sa;
 
-	for (sa = TAILQ_FIRST(head); sa; sa = TAILQ_NEXT(sa, link)) {
-		if (!IN6_ARE_ADDR_EQUAL(&sa->addr.addr, &addr->addr))
-			continue;
-		return (sa);
+	TAILQ_FOREACH(sa, head, link) {
+		if (IN6_ARE_ADDR_EQUAL(&sa->addr.addr, &addr->addr)) {
+			return (sa);
+		}
 	}
 
 	return (NULL);
@@ -247,30 +247,33 @@ isvalid_addr(struct iactl *iac)
 {
 	struct iactl_na *iac_na = (struct iactl_na *)iac;
 
-	if (TAILQ_EMPTY(&iac_na->statefuladdr_head))
+	if (TAILQ_EMPTY(&iac_na->statefuladdr_head)) {
 		return (0);	/* this IA is invalid */
+	}
+
 	return (1);
 }
 
 static uint32_t
 duration_addr(struct iactl *iac)
 {
+	uint32_t base = DHCP6_DURATION_INFINITE, pltime, passed;
 	struct iactl_na *iac_na = (struct iactl_na *)iac;
 	struct statefuladdr *sa;
-	uint32_t base = DHCP6_DURATION_INFINITE, pltime, passed;
 	time_t now;
 
 	/* Determine the smallest period until pltime expires. */
 	now = time(NULL);
-	for (sa = TAILQ_FIRST(&iac_na->statefuladdr_head); sa;
-	    sa = TAILQ_NEXT(sa, link)) {
+
+	TAILQ_FOREACH(sa, &iac_na->statefuladdr_head, link) {
 		passed = now > sa->updatetime ?
 		    (uint32_t)(now - sa->updatetime) : 0;
 		pltime = sa->addr.pltime > passed ?
 		    sa->addr.pltime - passed : 0;
 
-		if (base == DHCP6_DURATION_INFINITE || pltime < base)
+		if (base == DHCP6_DURATION_INFINITE || pltime < base) {
 			base = pltime;
+		}
 	}
 
 	return (base);
@@ -299,18 +302,24 @@ renew_addr(struct iactl *iac, struct dhcp6_ia *iaparam,
 	struct dhcp6_list *ial = NULL, pl;
 
 	TAILQ_INIT(&pl);
-	for (sa = TAILQ_FIRST(&iac_na->statefuladdr_head); sa;
-	    sa = TAILQ_NEXT(sa, link)) {
+
+	TAILQ_FOREACH(sa, &iac_na->statefuladdr_head, link) {
 		if (dhcp6_add_listval(&pl, DHCP6_LISTVAL_STATEFULADDR6,
-		    &sa->addr, NULL) == NULL)
+		    &sa->addr, NULL) == NULL) {
 			goto fail;
+		}
 	}
 
-	if ((ial = malloc(sizeof(*ial))) == NULL)
+	if ((ial = malloc(sizeof(*ial))) == NULL) {
 		goto fail;
+	}
+
 	TAILQ_INIT(ial);
-	if (dhcp6_add_listval(ial, DHCP6_LISTVAL_IANA, iaparam, &pl) == NULL)
+
+	if (dhcp6_add_listval(ial, DHCP6_LISTVAL_IANA, iaparam, &pl) == NULL) {
 		goto fail;
+	}
+
 	dhcp6_clear_list(&pl);
 
 	evd->type = DHCP6_EVDATA_IANA;
@@ -320,10 +329,12 @@ renew_addr(struct iactl *iac, struct dhcp6_ia *iaparam,
 
 	return (0);
 
-  fail:
+fail:
 	dhcp6_clear_list(&pl);
-	if (ial)
+	if (ial) {
 		free(ial);
+	}
+
 	return (-1);
 }
 

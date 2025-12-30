@@ -1106,7 +1106,7 @@ configure_addr(struct cf_list *cf_addr_list, struct dhcp6_list *list0,
 		}
 	}
 
-	return 0;
+	return (0);
 }
 
 static int
@@ -1162,7 +1162,7 @@ configure_domain(struct cf_list *cf_name_list, struct dhcp6_list *list0,
 		dhcp6_vbuf_free(&name_vbuf);
 	}
 
-	return 0;
+	return (0);
 }
 
 static int
@@ -2242,7 +2242,7 @@ get_free_address_from_pool(struct pool_conf *pool, struct in6_addr *addr)
 			d_printf(LOG_DEBUG, FNAME, "found %s",
 				in6addr2str(&cur, 0));
 			*addr= cur;
-			return 1;
+			return (1);
 		}
 
 		d_printf(LOG_DEBUG, FNAME, "next address %s",
@@ -2250,14 +2250,16 @@ get_free_address_from_pool(struct pool_conf *pool, struct in6_addr *addr)
 	}
 
 	d_printf(LOG_NOTICE, FNAME, "no available address");
-	return 0;
+
+	return (0);
 }
 
 int
 is_available_in_pool(struct pool_conf *pool, struct in6_addr *addr)
 {
-	if (!pool || !addr)
+	if (!pool || !addr) {
 		return (0);
+	}
 
 	d_printf(LOG_DEBUG, FNAME, "pool=%s, addr=%s",
 		 pool->name, in6addr2str(addr, 0));

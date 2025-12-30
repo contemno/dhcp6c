@@ -237,7 +237,7 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 
 	/* if a script is not specified, do nothing */
 	if (scriptpath == NULL || strlen(scriptpath) == 0) {
-		return -1;
+		return (-1);
 	}
 
 	d_printf(LOG_DEBUG, FNAME, "executes %s", scriptpath);
@@ -265,7 +265,7 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	if ((envp = malloc(sizeof (char *) * envc)) == NULL) {
 		d_printf(LOG_NOTICE, FNAME,
 		    "failed to allocate environment buffer");
-		return -1;
+		return (-1);
 	}
 	memset(envp, 0, sizeof(char *) * envc);
 	i = 0;
@@ -341,5 +341,5 @@ clean:
 	}
 	free(envp);
 
-	return ret;
+	return (ret);
 }

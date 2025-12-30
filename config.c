@@ -151,67 +151,6 @@ struct host_conf *find_dynamic_hostconf(struct duid *);
 static int in6_addr_cmp(struct in6_addr *, struct in6_addr *);
 static void in6_addr_inc(struct in6_addr *);
 
-/* a debug helper to complete someday if needed... or delete*/
-void list_cfl (char *tag,struct cf_namelist *head)
-{
-	struct cf_namelist *ifp;
-	printf("LIST CFL %s\n",tag);
-
-	for (ifp = head; ifp; ifp = ifp->next) {
-		printf("Do ifp->%s\n", ifp->name);
-		struct cf_list *cfl;
-		for (cfl = ifp->params; cfl; cfl = cfl->next) {
-			printf("Do cfltype->%i  lineconf %i  ptr=%p sublist=%p\n", cfl->type,cfl->line, cfl->ptr, cfl->list);
-			    switch(cfl->type) {
-
-				case DECL_SEND:{
-					struct cf_list *cf0 = (void*)cfl->list;
-					for (; cf0; cf0 = cf0->next) {
-					    //printf("SEND opt type %i\n",cf0->type);
-					    switch (cf0->type) {
-					    case DHCPOPT_RAW:{
-						    struct rawoption *op = cf0->ptr;
-						    printf("rawop %i datalen %i\n", op->opnum, op->datalen);
-						}
-						break;
-					    default:;
-					    }
-					}
-					}
-					break;
-				case DECL_SCRIPT:
-					printf("script %s\n", (char *)cfl->ptr);
-					break;
-				default:
-					printf("Unknown option type %i\n", cfl->type);
-			    }
-/*
-		case DHCPOPT_RAW:
-		case DHCPOPT_RAPID_COMMIT:
-		case DHCPOPT_AUTHINFO:
-		case DHCPOPT_IA_PD:
-		case DHCPOPT_IA_NA:
-		case DHCPOPT_SIP:
-		case DHCPOPT_SIPNAME:
-		case DHCPOPT_DNS:
-		case DHCPOPT_DNSNAME:
-		case DHCPOPT_NTP:
-		case DHCPOPT_NIS:
-		case DHCPOPT_NISNAME:
-		case DHCPOPT_NISP:
-		case DHCPOPT_NISPNAME:
-		case DHCPOPT_BCMCS:
-		case DHCPOPT_BCMCSNAME:
-		case DHCPOPT_REFRESHTIME:
-			printf("Known option type %i\n", cfl->type);
-			break;
-		default:
-			printf("Unknown option type %i\n", cfl->type);
-*/
-		}
-	}
-}
-
 int
 configure_interface(struct cf_namelist *iflist)
 {
@@ -248,7 +187,7 @@ configure_interface(struct cf_namelist *iflist)
 		TAILQ_INIT(&ifc->rawopt_list);
 
 		for (cfl = ifp->params; cfl; cfl = cfl->next) {
-			switch(cfl->type) {
+			switch (cfl->type) {
 			case DECL_REQUEST:
 				if (dhcp6_mode != DHCP6_MODE_CLIENT) {
 					d_printf(LOG_INFO, FNAME, "%s:%d "
@@ -419,7 +358,7 @@ configure_ia(struct cf_namelist *ialist, iatype_t iatype)
 		init = 0;
 	}
 
-	switch(iatype) {
+	switch (iatype) {
 	case IATYPE_PD:
 		confsize = sizeof(struct iapd_conf);
 		break;
@@ -449,7 +388,7 @@ configure_ia(struct cf_namelist *ialist, iatype_t iatype)
 		TAILQ_INSERT_TAIL(&ia_conflist0, iac, link);
 
 		/* IA-type specific initialization */
-		switch(iatype) {
+		switch (iatype) {
 		case IATYPE_PD:
 			TAILQ_INIT(&((struct iapd_conf *)iac)->iapd_prefix_list);
 			TAILQ_INIT(&((struct iapd_conf *)iac)->iapd_pif_list);
@@ -468,7 +407,7 @@ configure_ia(struct cf_namelist *ialist, iatype_t iatype)
 
 			switch (iatype) {
 			case IATYPE_PD:
-				switch(cfl->type) {
+				switch (cfl->type) {
 				case IACONF_PIF:
 					if (add_pd_pif(pdp, cfl, if_count))
 						goto bad;
@@ -491,7 +430,7 @@ configure_ia(struct cf_namelist *ialist, iatype_t iatype)
 				}
 				break;
 			case IATYPE_NA:
-				switch(cfl->type) {
+				switch (cfl->type) {
 				case IACONF_ADDR:
 					if (add_prefix(&nap->iana_address_list,
 					    "IANA", DHCP6_LISTVAL_STATEFULADDR6,
@@ -526,13 +465,12 @@ configure_ia(struct cf_namelist *ialist, iatype_t iatype)
 static int
 add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 {
-	struct cf_list *cfl;
 	struct prefix_ifconf *pif;
+	struct cf_list *cfl;
 	int ifid_done = 0;
 
 	/* duplication check */
-	for (pif = TAILQ_FIRST(&iapdc->iapd_pif_list); pif;
-	    pif = TAILQ_NEXT(pif, link)) {
+	TAILQ_FOREACH(pif, &iapdc->iapd_pif_list, link) {
 		if (strcmp(pif->ifname, cfl0->ptr) == 0) {
 			d_printf(LOG_NOTICE, FNAME, "%s:%d "
 			    "duplicated prefix interface: %s",
@@ -565,7 +503,7 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 	pif->sla_id = if_count;
 
 	for (cfl = cfl0->list; cfl; cfl = cfl->next) {
-		switch(cfl->type) {
+		switch (cfl->type) {
 		case IFPARAM_SLA_ID:
 			pif->sla_id = (uint32_t)cfl->num;
 			break;
@@ -647,7 +585,7 @@ configure_host(struct cf_namelist *hostlist)
 		}
 
 		for (cfl = host->params; cfl; cfl = cfl->next) {
-			switch(cfl->type) {
+			switch (cfl->type) {
 			case DECL_DUID:
 				if (hconf->duid.duid_id) {
 					d_printf(LOG_ERR, FNAME, "%s:%d "
@@ -1145,7 +1083,7 @@ configure_addr(struct cf_list *cf_addr_list, struct dhcp6_list *list0,
 	if (cf_addr_list != NULL && dhcp6_mode != DHCP6_MODE_SERVER) {
 		d_printf(LOG_INFO, FNAME, "%s:%d server-only configuration",
 		    configfilename, cf_addr_list->line);
-		return -1;
+		return (-1);
 	}
 
 	TAILQ_INIT(list0);
@@ -1158,13 +1096,13 @@ configure_addr(struct cf_list *cf_addr_list, struct dhcp6_list *list0,
 			    configfilename, cl->line,
 			    optname,
 			    in6addr2str((struct in6_addr *)cl->ptr, 0));
-			return -1;
+			return (-1);
 		}
 		if (dhcp6_add_listval(list0, DHCP6_LISTVAL_ADDR6,
 		    cl->ptr, NULL) == NULL) {
 			d_printf(LOG_ERR, FNAME, "failed to add a %s server",
 			    optname);
-			return -1;
+			return (-1);
 		}
 	}
 
@@ -1181,7 +1119,7 @@ configure_domain(struct cf_list *cf_name_list, struct dhcp6_list *list0,
 	if (cf_name_list != NULL && dhcp6_mode != DHCP6_MODE_SERVER) {
 		d_printf(LOG_INFO, FNAME, "%s:%d server-only configuration",
 		    configfilename, cf_name_list->line);
-		return -1;
+		return (-1);
 	}
 
 	TAILQ_INIT(list0);
@@ -1194,7 +1132,7 @@ configure_domain(struct cf_list *cf_name_list, struct dhcp6_list *list0,
 			d_printf(LOG_ERR, FNAME,
 			    "failed to copy a %s domain name",
 			    optname);
-			return -1;
+			return (-1);
 		}
 		cp = name + strlen(name) - 1;
 		*cp = '\0';	/* clear the terminating quote */
@@ -1210,7 +1148,7 @@ configure_domain(struct cf_list *cf_name_list, struct dhcp6_list *list0,
 			    configfilename, cl->line, optname,
 			    name_vbuf.dv_buf);
 			dhcp6_vbuf_free(&name_vbuf);
-			return -1;
+			return (-1);
 		}
 
 		/* add the name */
@@ -1219,7 +1157,7 @@ configure_domain(struct cf_list *cf_name_list, struct dhcp6_list *list0,
 			d_printf(LOG_ERR, FNAME, "failed to add a %s name",
 			    optname);
 			dhcp6_vbuf_free(&name_vbuf);
-			return -1;
+			return (-1);
 		}
 		dhcp6_vbuf_free(&name_vbuf);
 	}
@@ -1609,7 +1547,7 @@ clear_iaconf(struct ia_conflist *ialist)
 	while ((iac = TAILQ_FIRST(ialist)) != NULL) {
 		TAILQ_REMOVE(ialist, iac, link);
 
-		switch(iac->type) {
+		switch (iac->type) {
 		case IATYPE_PD:
 			if (!TAILQ_EMPTY(&iac->iadata)) {
 				d_printf(LOG_ERR, FNAME, "assumption failure");
@@ -1678,7 +1616,7 @@ add_options(int opcode, struct dhcp6_ifconf *ifc, struct cf_list *cfl0)
 	struct ia_conf *iac;
 
 	for (cfl = cfl0; cfl; cfl = cfl->next) {
-		switch(cfl->type) {
+		switch (cfl->type) {
 		case DHCPOPT_RAPID_COMMIT:
 			switch (opcode) {
 			case DHCPOPTCODE_SEND:
@@ -1781,7 +1719,7 @@ add_options(int opcode, struct dhcp6_ifconf *ifc, struct cf_list *cfl0)
 			if ((newop = malloc(sizeof(*newop))) == NULL) {
 				d_printf(LOG_ERR, FNAME,
 					"failed to allocate memory for a new raw option");
-				return(-1);
+				return (-1);
 			}
 
 			memset(newop, 0, sizeof(*newop));
@@ -1793,7 +1731,7 @@ add_options(int opcode, struct dhcp6_ifconf *ifc, struct cf_list *cfl0)
 			if ((newop->data = malloc(newop->datalen)) == NULL) {
 				d_printf(LOG_ERR, FNAME,
 				    "failed to allocate memory for new raw option data");
-				return(-1);
+				return (-1);
 			}
 			memcpy(newop->data, op->data, newop->datalen);
 
@@ -1850,7 +1788,7 @@ add_options(int opcode, struct dhcp6_ifconf *ifc, struct cf_list *cfl0)
 				opttype = DH6OPT_REFRESHTIME;
 				break;
 			}
-			switch(opcode) {
+			switch (opcode) {
 			case DHCPOPTCODE_REQUEST:
 				if (dhcp6_find_listval(&ifc->reqopt_list,
 					DHCP6_LISTVAL_NUM, &opttype, 0)
@@ -1966,9 +1904,10 @@ find_iaconf(struct ia_conflist *head, int type, uint32_t iaid)
 {
 	struct ia_conf *iac;
 
-	for (iac = TAILQ_FIRST(head); iac; iac = TAILQ_NEXT(iac, link)) {
-		if (iac->type == type && iac->iaid == iaid)
+	TAILQ_FOREACH(iac, head, link) {
+		if (iac->type == type && iac->iaid == iaid) {
 			return (iac);
+		}
 	}
 
 	return (NULL);
@@ -2012,12 +1951,13 @@ find_prefix6(struct dhcp6_list *list, struct dhcp6_prefix *prefix)
 {
 	struct dhcp6_listval *v;
 
-	for (v = TAILQ_FIRST(list); v; v = TAILQ_NEXT(v, link)) {
+	TAILQ_FOREACH(v, list, link) {
 		if (v->val_prefix6.plen == prefix->plen &&
 		    IN6_ARE_ADDR_EQUAL(&v->val_prefix6.addr, &prefix->addr)) {
 			return (&v->val_prefix6);
 		}
 	}
+
 	return (NULL);
 }
 
@@ -2076,7 +2016,7 @@ configure_pool(struct cf_namelist *poollist)
 		struct cf_list *cfl;
 
 		for (cfl = plp->params; cfl; cfl = cfl->next) {
-			switch(cfl->type) {
+			switch (cfl->type) {
 			case DECL_RANGE:
 				range = cfl->ptr;
 				break;

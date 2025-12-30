@@ -103,7 +103,7 @@ update_ia(iatype_t iatype, struct dhcp6_list *ialist, struct dhcp6_if *ifp,
 	struct dhcp6_listval *iav, *siav;
 	struct timeval timo;
 
-	for (iav = TAILQ_FIRST(ialist); iav; iav = TAILQ_NEXT(iav, link)) {
+	TAILQ_FOREACH(iav, ialist, link) {
 		/* if we're not interested in this IA, ignore it. */
 		if ((iac = find_iaconf(&ifp->iaconf_list, iatype,
 		    iav->val_ia.iaid)) == NULL) {
@@ -144,8 +144,7 @@ update_ia(iatype_t iatype, struct dhcp6_list *ialist, struct dhcp6_if *ifp,
 		}
 
 		/* update IA configuration information */
-		for (siav = TAILQ_FIRST(&iav->sublist); siav;
-		    siav = TAILQ_NEXT(siav, link)) {
+		TAILQ_FOREACH(siav, &iav->sublist, link) {
 			switch (siav->type) {
 			case DHCP6_LISTVAL_PREFIX6:
 				/* add or update the prefix */
@@ -432,11 +431,10 @@ callback( struct ia *ia)
 void
 release_all_ia(struct dhcp6_if *ifp)
 {
-	struct ia_conf *iac;
 	struct ia *ia, *ia_next;
+	struct ia_conf *iac;
 
-	for (iac = TAILQ_FIRST(&ifp->iaconf_list); iac;
-	    iac = TAILQ_NEXT(iac, link)) {
+	TAILQ_FOREACH(iac, &ifp->iaconf_list, link) {
 		for (ia = TAILQ_FIRST(&iac->iadata); ia; ia = ia_next) {
 			ia_next = TAILQ_NEXT(ia, link);
 
@@ -444,9 +442,10 @@ release_all_ia(struct dhcp6_if *ifp)
 				d_printf(LOG_INFO, FNAME, "Start address "
 				    "release");
 				(void)release_ia(ia);
-			} else
+			} else {
 				d_printf(LOG_INFO, FNAME, "Bypassing address "
 				    "release because of -n flag");
+			}
 
 			/*
 			 * The client MUST stop using all of the addresses
@@ -646,7 +645,8 @@ ia_timo(void *arg)
 	iaparam.iaid = ia->conf->iaid;
 	iaparam.t1 = ia->t1;
 	iaparam.t2 = ia->t2;
-	switch(ia->state) {
+
+	switch (ia->state) {
 	case IAS_RENEW:
 		if (ia->ctl && ia->ctl->renew_data) {
 			if ((*ia->ctl->renew_data)(ia->ctl, &iaparam,
@@ -685,7 +685,7 @@ ia_timo(void *arg)
 
 	ia->evdata = evd;
 
-	switch(ia->state) {
+	switch (ia->state) {
 	case IAS_RENEW:
 	case IAS_REBIND:
 		client6_send(ev);
@@ -749,10 +749,10 @@ find_ia(struct ia_conf *iac, iatype_t type, uint32_t iaid)
 {
 	struct ia *ia;
 
-	for (ia = TAILQ_FIRST(&iac->iadata); ia;
-	    ia = TAILQ_NEXT(ia, link)) {
-		if (ia->conf->type == type && ia->conf->iaid == iaid)
+	TAILQ_FOREACH(ia, &iac->iadata, link) {
+		if (ia->conf->type == type && ia->conf->iaid == iaid) {
 			return (ia);
+		}
 	}
 
 	return (NULL);

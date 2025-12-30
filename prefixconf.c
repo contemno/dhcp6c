@@ -315,22 +315,23 @@ isvalid(struct iactl *iac)
 static uint32_t
 duration(struct iactl *iac)
 {
+	uint32_t base = DHCP6_DURATION_INFINITE, pltime, passed;
 	struct iactl_pd *iac_pd = (struct iactl_pd *)iac;
 	struct siteprefix *sp;
-	uint32_t base = DHCP6_DURATION_INFINITE, pltime, passed;
 	time_t now;
 
 	/* Determine the smallest period until pltime expires. */
 	now = time(NULL);
-	for (sp = TAILQ_FIRST(&iac_pd->siteprefix_head); sp;
-	    sp = TAILQ_NEXT(sp, link)) {
+
+	TAILQ_FOREACH(sp, &iac_pd->siteprefix_head, link) {
 		passed = now > sp->updatetime ?
 		    (uint32_t)(now - sp->updatetime) : 0;
 		pltime = sp->prefix.pltime > passed ?
 		    sp->prefix.pltime - passed : 0;
 
-		if (base == DHCP6_DURATION_INFINITE || pltime < base)
+		if (base == DHCP6_DURATION_INFINITE || pltime < base) {
 			base = pltime;
+		}
 	}
 
 	return (base);
@@ -359,8 +360,8 @@ renew_prefix(struct iactl *iac, struct dhcp6_ia *iaparam,
 	struct dhcp6_list *ial = NULL, pl;
 
 	TAILQ_INIT(&pl);
-	for (sp = TAILQ_FIRST(&iac_pd->siteprefix_head); sp;
-	    sp = TAILQ_NEXT(sp, link)) {
+
+	TAILQ_FOREACH(sp, &iac_pd->siteprefix_head, link) {
 		if (dhcp6_add_listval(&pl, DHCP6_LISTVAL_PREFIX6,
 		    &sp->prefix, NULL) == NULL) {
 			goto fail;
@@ -370,10 +371,13 @@ renew_prefix(struct iactl *iac, struct dhcp6_ia *iaparam,
 	if ((ial = malloc(sizeof(*ial))) == NULL) {
 		goto fail;
 	}
+
 	TAILQ_INIT(ial);
+
 	if (dhcp6_add_listval(ial, DHCP6_LISTVAL_IAPD, iaparam, &pl) == NULL) {
 		goto fail;
 	}
+
 	dhcp6_clear_list(&pl);
 
 	evd->type = DHCP6_EVDATA_IAPD;

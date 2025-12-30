@@ -429,7 +429,7 @@ dhcp6_get_addr(int optlen, void *cp, dhcp6_listval_type_t type,
 	if (optlen % sizeof(struct in6_addr) || optlen == 0) {
 		d_printf(LOG_INFO, FNAME,
 		    "malformed DHCP option: type %d, len %d", type, optlen);
-		return -1;
+		return (-1);
 	}
 	for (val = (char *)cp; val < (char *)cp + optlen;
 	    val += sizeof(struct in6_addr)) {
@@ -447,11 +447,11 @@ dhcp6_get_addr(int optlen, void *cp, dhcp6_listval_type_t type,
 		    &valaddr, NULL) == NULL) {
 			d_printf(LOG_ERR, FNAME,
 			    "failed to copy %s address", dhcp6optstr(type));
-			return -1;
+			return (-1);
 		}
 	}
 
-	return 0;
+	return (0);
 }
 
 static int
@@ -463,7 +463,7 @@ dhcp6_set_addr(dhcp6_listval_type_t type, struct dhcp6_list *list,
 	int optlen;
 
 	if (TAILQ_EMPTY(list)) {
-		return 0;
+		return (0);
 	}
 
 	optlen = dhcp6_count_list(list) * sizeof(struct in6_addr);
@@ -471,7 +471,7 @@ dhcp6_set_addr(dhcp6_listval_type_t type, struct dhcp6_list *list,
 		d_printf(LOG_ERR, FNAME,
 		    "memory allocation failed for %s options",
 		    dhcp6optstr(type));
-		return -1;
+		return (-1);
 	}
 
 	TAILQ_FOREACH(d, list, link) {
@@ -480,12 +480,12 @@ dhcp6_set_addr(dhcp6_listval_type_t type, struct dhcp6_list *list,
 
 	if (copy_option(type, optlen, (char *)in6, p, optep, len) != 0) {
 		free(in6);
-		return -1;
+		return (-1);
 	}
 
 	free(in6);
 
-	return 0;
+	return (0);
 }
 
 static int
@@ -507,7 +507,7 @@ dhcp6_get_domain(int optlen, void *cp, dhcp6_listval_type_t type,
 			d_printf(LOG_INFO, FNAME,
 			    "malformed DHCP option: type %d, len %d",
 			     type, optlen);
-			return -1;
+			return (-1);
 		}
 
 		vb.dv_len = strlen(name) + 1;
@@ -517,11 +517,11 @@ dhcp6_get_domain(int optlen, void *cp, dhcp6_listval_type_t type,
 		    DHCP6_LISTVAL_VBUF, &vb, NULL) == NULL) {
 			d_printf(LOG_ERR, FNAME, "failed to "
 			    "copy a %s domain name", dhcp6optstr(type));
-			return -1;
+			return (-1);
 		}
 	}
 
-	return 0;
+	return (0);
 }
 
 static int
@@ -534,7 +534,7 @@ dhcp6_set_domain(dhcp6_listval_type_t type, struct dhcp6_list *list,
 	char *tmpbuf;
 
 	if (TAILQ_EMPTY(list)) {
-		return 0;
+		return (0);
 	}
 
 	TAILQ_FOREACH(d, list, link) {
@@ -542,7 +542,7 @@ dhcp6_set_domain(dhcp6_listval_type_t type, struct dhcp6_list *list,
 	}
 
 	if (optlen == 0) {
-		return 0;
+		return (0);
 	}
 
 	tmpbuf = NULL;
@@ -550,7 +550,7 @@ dhcp6_set_domain(dhcp6_listval_type_t type, struct dhcp6_list *list,
 	if ((tmpbuf = malloc(optlen)) == NULL) {
 		d_printf(LOG_ERR, FNAME, "memory allocation failed for "
 		    "%s domain options", dhcp6optstr(type));
-		return -1;
+		return (-1);
 	}
 
 	cp = tmpbuf;
@@ -566,14 +566,14 @@ dhcp6_set_domain(dhcp6_listval_type_t type, struct dhcp6_list *list,
 			    "failed to encode a %s domain name",
 			    dhcp6optstr(type));
 			free(tmpbuf);
-			return -1;
+			return (-1);
 		}
 		if (ep - cp < nlen) {
 			d_printf(LOG_ERR, FNAME,
 			    "buffer length for %s domain name is too short",
 			    dhcp6optstr(type));
 			free(tmpbuf);
-			return -1;
+			return (-1);
 		}
 		memcpy(cp, name, nlen);
 		cp += nlen;
@@ -581,12 +581,12 @@ dhcp6_set_domain(dhcp6_listval_type_t type, struct dhcp6_list *list,
 
 	if (copy_option(type, cp - tmpbuf, tmpbuf, p, optep, len) != 0) {
 		free(tmpbuf);
-		return -1;
+		return (-1);
 	}
 
 	free(tmpbuf);
 
-	return 0;
+	return (0);
 }
 
 struct dhcp6_event *
@@ -1921,7 +1921,7 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 			if ((rawop = malloc(sizeof(*rawop))) == NULL) {
 				d_printf(LOG_ERR, FNAME,
 					"failed to allocate memory for a new raw option");
-				return(-1);
+				return (-1);
 			}
 
 			memset(rawop, 0, sizeof(*rawop));
@@ -1933,7 +1933,7 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 			if ((rawop->data = malloc(rawop->datalen)) == NULL) {
 				d_printf(LOG_ERR, FNAME,
 				    "failed to allocate memory for new raw option data");
-				return(-1);
+				return (-1);
 			}
 			memcpy(rawop->data, cp, rawop->datalen);
 
@@ -2791,7 +2791,7 @@ copyout_option(char *p, char *ep, struct dhcp6_listval *optval)
 	/* finally, deal with the head part again */
 	optlen = headlen + sublen;
 	if (!p) {
-		return(optlen);
+		return (optlen);
 	}
 
 	d_printf(LOG_DEBUG, FNAME, "set %s", dhcp6optstr(opttype));
@@ -3217,14 +3217,16 @@ duidstr(struct duid *duid)
 
 	cp = duidstr;
 	ep = duidstr + sizeof(duidstr);
+
 	for (i = 0; i < duid->duid_len && i <= 128; i++) {
 		n = snprintf(cp, ep - cp, "%s%02x", i == 0 ? "" : ":",
 		    duid->duid_id[i] & 0xff);
 		if (n < 0) {
-			return NULL;
+			return (NULL);
 		}
 		cp += n;
 	}
+
 	if (i < duid->duid_len) {
 		snprintf(cp, ep - cp, "%s", "...");
 	}

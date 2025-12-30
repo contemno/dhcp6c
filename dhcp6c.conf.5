@@ -27,7 +27,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd June 7, 2024
+.Dd December 30, 2025
 .Dt DHCP6C.CONF 5
 .Os KAME
 .Sh NAME
@@ -336,6 +336,25 @@ should be used
 .It Ic prefix Ar ipv6-prefix pltime Op Ar vltime ;
 specifies a prefix and related parameters that the client wants to be
 delegated.
+.Ar ipv6-prefix
+is a string representing a valid IPv6 prefix.
+.Ar pltime
+and
+.Ar vltime
+are preferred and valid lifetimes of the prefix, respectively.
+When the latter is omitted, it will be set to the same value of
+.Ar pltime.
+A positive decimal number or a special string
+.Ic infinity
+can be specified as a lifetime.
+A decimal number provides the lifetime in seconds,
+while
+.Ic infinity
+means the corresponding lifetime never expires.
+When both lifetimes are specified,
+.Ar pltime
+must not be larger than
+.Ar vltime .
 Multiple prefixes can be specified, each of which is described as a
 separate
 .Ic prefix
@@ -348,12 +367,6 @@ as an IA_PD prefix option encapsulated in the corresponding IA_PD
 option.
 Note, however, that the server may or may not respect the specified
 prefix parameters.
-For parameters of the
-.Ic prefix
-substatement,
-see
-.\" XXX apparently not
-.Xr dhcp6s.conf 5 .
 .El
 .Pp
 The followings are possible
@@ -367,6 +380,9 @@ for an IA of type
 .Xc
 specifies an address and related parameters that the client wants to be
 allocated.
+Everything is same as
+.Ar prefix
+option, except that you do not need specify prefix length.
 Multiple addresses can be specified, each of which is described as a
 separate
 .Ic address
@@ -379,12 +395,6 @@ as an IA_NA prefix option encapsulated in the corresponding IA_NA
 option.
 Note, however, that the server may or may not respect the specified
 prefix parameters.
-For parameters of the
-.Ic address
-substatement,
-see
-.\" XXX apparently not
-.Xr dhcp6s.conf 5 .
 .El
 .El
 .Sh Prefix interface statement

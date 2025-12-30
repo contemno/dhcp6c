@@ -2001,8 +2001,6 @@ configure_pool(struct cf_namelist *poollist)
 {
 	struct cf_namelist *plp;
 
-	d_printf(LOG_DEBUG, FNAME, "called");
-
 	if (poollist && dhcp6_mode != DHCP6_MODE_SERVER) {
 		d_printf(LOG_ERR, FNAME, "%s:%d "
 			"pool statement is server-only",
@@ -2055,8 +2053,6 @@ static void
 clear_poolconf(struct pool_conf *plist)
 {
 	struct pool_conf *pool, *pool_next;
-
-	d_printf(LOG_DEBUG, FNAME, "called");
 
 	for (pool = plist; pool; pool = pool_next) {
 		pool_next = pool->next;
@@ -2228,10 +2224,10 @@ int
 get_free_address_from_pool(struct pool_conf *pool, struct in6_addr *addr)
 {
 	struct in6_addr cur;
-	if (!pool || !addr)
-		return (0);
 
-	d_printf(LOG_DEBUG, FNAME, "called (pool=%s)", pool->name);
+	if (!pool || !addr) {
+		return (0);
+	}
 
 	for (cur = pool->min; in6_addr_cmp(&cur, &pool->max) <= 0;
 	    in6_addr_inc(&cur)) {

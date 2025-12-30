@@ -94,8 +94,6 @@ static struct hash_entry * hash_table_find(struct hash_table *, void *);
 int
 lease_init(void)
 {
-	d_printf(LOG_DEBUG, FNAME, "called");
-
 	if (hash_table_init(&dhcp6_lease_table, DHCP6_LEASE_TABLE_SIZE,
 		in6_addr_hash, in6_addr_match) != 0) {
 		return (-1);

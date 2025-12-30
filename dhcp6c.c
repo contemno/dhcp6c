@@ -498,8 +498,9 @@ free_resources(struct dhcp6_if *freeifp)
 	for (ifp = dhcp6_if; ifp; ifp = ifp->next) {
 		struct dhcp6_event *ev, *ev_next;
 
-		if (freeifp != NULL && freeifp != ifp)
+		if (freeifp != NULL && freeifp != ifp) {
 			continue;
+		}
 
 		/* release all IAs as well as send RELEASE message(s) */
 		release_all_ia(ifp);
@@ -683,7 +684,7 @@ client6_timo(void *arg)
 		return (NULL);
 	}
 
-	switch(ev->state) {
+	switch (ev->state) {
 	case DHCP6S_INIT:
 		ev->timeouts = 0; /* indicate to generate a new XID. */
 		if ((ifp->send_flags & DHCIFF_INFO_ONLY) || infreq_mode)
@@ -771,11 +772,11 @@ construct_confdata(struct dhcp6_if *ifp, struct dhcp6_event *ev)
 
 	TAILQ_INIT(&pl);	/* for safety */
 
-	for (iac = TAILQ_FIRST(&ifp->iaconf_list); iac;
-	    iac = TAILQ_NEXT(iac, link)) {
+	TAILQ_FOREACH(iac, &ifp->iaconf_list, link) {
 		/* ignore IA config currently used */
-		if (!TAILQ_EMPTY(&iac->iadata))
+		if (!TAILQ_EMPTY(&iac->iadata)) {
 			continue;
+		}
 
 		evd = NULL;
 		if ((evd = malloc(sizeof(*evd))) == NULL) {
@@ -790,8 +791,9 @@ construct_confdata(struct dhcp6_if *ifp, struct dhcp6_event *ev)
 		switch (iac->type) {
 		case IATYPE_PD:
 			ial = NULL;
-			if ((ial = malloc(sizeof(*ial))) == NULL)
+			if ((ial = malloc(sizeof(*ial))) == NULL) {
 				goto fail;
+			}
 			TAILQ_INIT(ial);
 
 			TAILQ_INIT(&pl);
@@ -811,8 +813,9 @@ construct_confdata(struct dhcp6_if *ifp, struct dhcp6_event *ev)
 			break;
 		case IATYPE_NA:
 			ial = NULL;
-			if ((ial = malloc(sizeof(*ial))) == NULL)
+			if ((ial = malloc(sizeof(*ial))) == NULL) {
 				goto fail;
+			}
 			TAILQ_INIT(ial);
 
 			TAILQ_INIT(&pl);
@@ -838,11 +841,13 @@ construct_confdata(struct dhcp6_if *ifp, struct dhcp6_event *ev)
 
 	return (0);
 
-  fail:
-	if (evd)
+fail:
+	if (evd) {
 		free(evd);
-	if (ial)
+	}
+	if (ial) {
 		free(ial);
+	}
 	dhcp6_remove_event(ev);	/* XXX */
 
 	return (-1);
@@ -860,16 +865,17 @@ construct_reqdata(struct dhcp6_if *ifp,
 	/* discard previous event data */
 	dhcp6_remove_evdata(ev);
 
-	if (optinfo == NULL)
+	if (optinfo == NULL) {
 		return (0);
+	}
 
-	for (iac = TAILQ_FIRST(&ifp->iaconf_list); iac;
-	    iac = TAILQ_NEXT(iac, link)) {
+	TAILQ_FOREACH(iac, &ifp->iaconf_list, link) {
 		struct dhcp6_listval *v;
 
 		/* ignore IA config currently used */
-		if (!TAILQ_EMPTY(&iac->iadata))
+		if (!TAILQ_EMPTY(&iac->iadata)) {
 			continue;
+		}
 
 		memset(&iaparam, 0, sizeof(iaparam));
 		iaparam.iaid = iac->iaid;
@@ -880,11 +886,13 @@ construct_reqdata(struct dhcp6_if *ifp,
 		switch (iac->type) {
 		case IATYPE_PD:
 			if ((v = dhcp6_find_listval(&optinfo->iapd_list,
-			    DHCP6_LISTVAL_IAPD, &iaparam, 0)) == NULL)
+			    DHCP6_LISTVAL_IAPD, &iaparam, 0)) == NULL) {
 				continue;
+			}
 
-			if ((ial = malloc(sizeof(*ial))) == NULL)
+			if ((ial = malloc(sizeof(*ial))) == NULL) {
 				goto fail;
+			}
 
 			TAILQ_INIT(ial);
 			if (dhcp6_add_listval(ial, DHCP6_LISTVAL_IAPD,
@@ -892,8 +900,9 @@ construct_reqdata(struct dhcp6_if *ifp,
 				goto fail;
 			}
 
-			if ((evd = malloc(sizeof(*evd))) == NULL)
+			if ((evd = malloc(sizeof(*evd))) == NULL) {
 				goto fail;
+			}
 			memset(evd, 0, sizeof(*evd));
 			evd->type = DHCP6_EVDATA_IAPD;
 			evd->data = ial;
@@ -903,11 +912,13 @@ construct_reqdata(struct dhcp6_if *ifp,
 			break;
 		case IATYPE_NA:
 			if ((v = dhcp6_find_listval(&optinfo->iana_list,
-			    DHCP6_LISTVAL_IANA, &iaparam, 0)) == NULL)
+			    DHCP6_LISTVAL_IANA, &iaparam, 0)) == NULL) {
 				continue;
+			}
 
-			if ((ial = malloc(sizeof(*ial))) == NULL)
+			if ((ial = malloc(sizeof(*ial))) == NULL) {
 				goto fail;
+			}
 
 			TAILQ_INIT(ial);
 			if (dhcp6_add_listval(ial, DHCP6_LISTVAL_IANA,
@@ -915,8 +926,9 @@ construct_reqdata(struct dhcp6_if *ifp,
 				goto fail;
 			}
 
-			if ((evd = malloc(sizeof(*evd))) == NULL)
+			if ((evd = malloc(sizeof(*evd))) == NULL) {
 				goto fail;
+			}
 			memset(evd, 0, sizeof(*evd));
 			evd->type = DHCP6_EVDATA_IANA;
 			evd->data = ial;
@@ -932,11 +944,13 @@ construct_reqdata(struct dhcp6_if *ifp,
 
 	return (0);
 
-  fail:
-	if (evd)
+fail:
+	if (evd) {
 		free(evd);
-	if (ial)
+	}
+	if (ial) {
 		free(ial);
+	}
 	dhcp6_remove_event(ev);	/* XXX */
 
 	return (-1);
@@ -1012,7 +1026,7 @@ client6_send(struct dhcp6_event *ev)
 	dh6 = (struct dhcp6 *)buf;
 	memset(dh6, 0, sizeof(*dh6));
 
-	switch(ev->state) {
+	switch (ev->state) {
 	case DHCP6S_SOLICIT:
 		dh6->dh6_msgtype = DH6_SOLICIT;
 		d_printf(LOG_INFO, FNAME, "Sending Solicit on %s", ifp->ifname);
@@ -1128,9 +1142,8 @@ client6_send(struct dhcp6_event *ev)
 	}
 
 	/* configuration information specified as event data */
-	for (evd = TAILQ_FIRST(&ev->data_list); evd;
-	     evd = TAILQ_NEXT(evd, link)) {
-		switch(evd->type) {
+	TAILQ_FOREACH(evd, &ev->data_list, link) {
+		switch (evd->type) {
 		case DHCP6_EVDATA_IAPD:
 			if (dhcp6_copy_list(&optinfo.iapd_list,
 			    (struct dhcp6_list *)evd->data)) {
@@ -1311,7 +1324,7 @@ client6_recv(void)
 		return;
 	}
 
-	switch(dh6->dh6_msgtype) {
+	switch (dh6->dh6_msgtype) {
 	case DH6_ADVERTISE:
 		(void)client6_recvadvert(ifp, dh6, len, &optinfo);
 		break;
@@ -1381,11 +1394,10 @@ client6_recvadvert(struct dhcp6_if *ifp, struct dhcp6 *dh6,
 	 * We only apply this when we are going to request an address or
 	 * a prefix.
 	 */
-	for (evd = TAILQ_FIRST(&ev->data_list); evd;
-	    evd = TAILQ_NEXT(evd, link)) {
+	TAILQ_FOREACH(evd, &ev->data_list, link) {
 		struct dhcp6_listval *lv, *slv;
-		uint16_t stcode;
 		const char *stcodestr;
+		uint16_t stcode;
 
 		switch (evd->type) {
 		case DHCP6_EVDATA_IAPD:
@@ -1682,8 +1694,7 @@ client6_recvreply(struct dhcp6_if *ifp, struct dhcp6 *dh6,
 	 * status code option in the Reply message.
 	 * [RFC3315 Section 18.1.8]
 	 */
-	for (lv = TAILQ_FIRST(&optinfo->stcode_list); lv;
-	     lv = TAILQ_NEXT(lv, link)) {
+	TAILQ_FOREACH(lv, &optinfo->stcode_list, link) {
 		d_printf(LOG_INFO, FNAME, "status code: %s",
 		    dhcp6_stcodestr(lv->val_num16));
 
@@ -1791,10 +1802,10 @@ find_event_withid(struct dhcp6_if *ifp, uint32_t xid)
 {
 	struct dhcp6_event *ev;
 
-	for (ev = TAILQ_FIRST(&ifp->event_list); ev;
-	     ev = TAILQ_NEXT(ev, link)) {
-		if (ev->xid == xid)
+	TAILQ_FOREACH(ev, &ifp->event_list, link) {
+		if (ev->xid == xid) {
 			return (ev);
+		}
 	}
 
 	return (NULL);

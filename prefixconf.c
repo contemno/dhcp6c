@@ -83,7 +83,7 @@ struct iactl_pd {
 #define ND6_INFINITE_LIFETIME 0xffffffff
 #endif
 
-#define ND6_GRACEPERIOD_LIFETIME 60
+#define ND6_GRACEPERIOD_LIFETIME	0
 
 #define UPDATE_LEASETIME(pip, sp)	do { \
 	(pip)->pltime = (sp)->prefix.pltime; \

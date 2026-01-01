@@ -3406,8 +3406,11 @@ ifaddrconf(ifaddrconf_cmd_t cmd, char *ifname, struct sockaddr_in6 *addr,
 #endif
 
 	if (ioctl(s, ioctl_cmd, &req)) {
-		d_printf(LOG_DEBUG, FNAME, "failed to %s an address on %s: %s",
-		    cmdstr, ifname, strerror(errno));
+		if (!strcmp(cmdstr, "remove")) {
+			d_printf(LOG_NOTICE, FNAME,
+			    "failed to %s an address on %s: %s",
+			    cmdstr, ifname, strerror(errno));
+		}
 		close(s);
 		return (-1);
 	}

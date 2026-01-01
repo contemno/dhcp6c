@@ -159,6 +159,8 @@
 				} else if (siav->type == DHCP6_LISTVAL_STATEFULADDR6) { \
 					snprintf(prefixinfo, sizeof(prefixinfo), \
 					    "%s/128", in6addr2str(&siav->val_statefuladdr6.addr, 0)); \
+					strlcat(sptr, prefixinfo, slen); \
+					strlcat(sptr, " ", slen); \
 				} \
 			} \
 		} \

@@ -208,7 +208,7 @@ update_prefix(struct ia *ia, struct dhcp6_prefix *pinfo,
 	/* update the prefix according to pinfo */
 	sp->prefix.pltime = pinfo->pltime;
 	sp->prefix.vltime = pinfo->vltime;
-	d_printf(LOG_DEBUG, FNAME, "%s a prefix %s/%d pltime=%" PRIu32
+	d_printf(LOG_INFO, FNAME, "%s a prefix %s/%d pltime=%" PRIu32
 	    ", vltime=%" PRIu32, spcreate ? "create" : "update",
 	    in6addr2str(&pinfo->addr, 0), pinfo->plen,
 	    pinfo->pltime, pinfo->vltime);
@@ -282,7 +282,7 @@ remove_siteprefix(struct siteprefix *sp)
 {
 	struct dhcp6_ifprefix *pip;
 
-	d_printf(LOG_DEBUG, FNAME, "remove a site prefix %s/%d",
+	d_printf(LOG_INFO, FNAME, "remove a site prefix %s/%d",
 	    in6addr2str(&sp->prefix.addr, 0), sp->prefix.plen);
 
 	if (sp->timer) {
@@ -419,7 +419,7 @@ siteprefix_timo(void *arg)
 	struct ia *ia;
 	void (*callback)(struct ia *);
 
-	d_printf(LOG_DEBUG, FNAME, "prefix timeout for %s/%d",
+	d_printf(LOG_INFO, FNAME, "prefix timeout for %s/%d",
 	    in6addr2str(&sp->prefix.addr, 0), sp->prefix.plen);
 
 	ia = sp->ctl->iacpd_ia;

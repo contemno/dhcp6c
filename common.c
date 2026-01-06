@@ -3266,7 +3266,7 @@ setloglevel(int debuglevel)
 {
 	switch (debuglevel) {
 	case 0:
-		debug_thresh = LOG_ERR;
+		debug_thresh = LOG_WARNING;
 		break;
 	case 1:
 		debug_thresh = LOG_INFO;

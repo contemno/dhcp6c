@@ -165,7 +165,7 @@ update_address(struct ia *ia, struct dhcp6_statefuladdr *addr,
 	sa->addr.vltime = addr->vltime;
 	sa->dhcpif = dhcpifp;
 
-	d_printf(LOG_DEBUG, FNAME, "%s an address %s pltime=%" PRIu32
+	d_printf(LOG_INFO, FNAME, "%s an address %s pltime=%" PRIu32
 	    ", vltime=%" PRIu32, sacreate ? "create" : "update",
 	    in6addr2str(&addr->addr, 0), addr->pltime, addr->vltime);
 
@@ -229,7 +229,7 @@ remove_addr(struct statefuladdr *sa)
 {
 	int ret;
 
-	d_printf(LOG_DEBUG, FNAME, "remove an address %s",
+	d_printf(LOG_INFO, FNAME, "remove an address %s",
 	    in6addr2str(&sa->addr.addr, 0));
 
 	if (sa->timer)
@@ -362,7 +362,7 @@ addr_timo(void *arg)
 	struct ia *ia;
 	void (*callback)(struct ia *);
 
-	d_printf(LOG_DEBUG, FNAME, "address timeout for %s",
+	d_printf(LOG_INFO, FNAME, "address timeout for %s",
 	    in6addr2str(&sa->addr.addr, 0));
 
 	ia = sa->ctl->iacna_ia;

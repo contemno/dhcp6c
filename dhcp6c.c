@@ -1299,13 +1299,14 @@ client6_recv(void)
 	}
 
 	if ((ifp = find_ifconfbyid((unsigned int)pi->ipi6_ifindex)) == NULL) {
-		d_printf(LOG_INFO, FNAME, "unexpected interface (%d)",
+		d_printf(LOG_DEBUG, FNAME,
+		    "skipping unrelated packet (interface %u)",
 		    (unsigned int)pi->ipi6_ifindex);
 		return;
 	}
 
 	if ((size_t)len < sizeof(*dh6)) {
-		d_printf(LOG_INFO, FNAME, "short packet (%d bytes)", len);
+		d_printf(LOG_INFO, FNAME, "short packet (%zd bytes)", len);
 		return;
 	}
 

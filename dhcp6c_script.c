@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2003 WIDE Project.
- * Copyright (C) 2023-2025 Franco Fichtner <franco@opnsense.org>
+ * Copyright (C) 2023-2026 Franco Fichtner <franco@opnsense.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,6 +64,17 @@
 #define DECLARE_LEN(lname)	int lname##_len = 0;
 #define PDINFO_MAX		64
 
+#define RENDER_DEVICE(lstr)	do { \
+	char device[PDINFO_MAX]; \
+	snprintf(device, sizeof(device), "%s=%s", lstr, ifname); \
+	if ((envp[i++] = strdup(device)) == NULL) { \
+		d_printf(LOG_NOTICE, FNAME, \
+		    "failed to allocate device string"); \
+		ret = -1; \
+		goto clean; \
+	} \
+} while (0)
+
 #define RENDER_REASON(lstr)	do { \
 	struct dhcp6_event ev; \
 	char reason[PDINFO_MAX]; \
@@ -72,7 +83,7 @@
 	    dhcp6_event_statestr(&ev)); \
 	if ((envp[i++] = strdup(reason)) == NULL) { \
 		d_printf(LOG_NOTICE, FNAME, \
-		    "failed to allocate reason strings"); \
+		    "failed to allocate reason string"); \
 		ret = -1; \
 		goto clean; \
 	} \
@@ -214,9 +225,11 @@
 } while (0)
 
 int
-client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
+client6_script(char *scriptpath, const char *ifname, int state,
+    struct dhcp6_optinfo *optinfo)
 {
-	int envc = 2;	/* we at least include the reason and the terminator */
+	/* we at least include the device, reason and the terminator */
+	int envc = 3;
 	int i, ret = 0;
 	char **envp;
 	pid_t pid, wpid;
@@ -272,6 +285,7 @@ client6_script(char *scriptpath, int state, struct dhcp6_optinfo *optinfo)
 	memset(envp, 0, sizeof(char *) * envc);
 	i = 0;
 
+	RENDER_DEVICE("DEVICE");
 	RENDER_REASON("REASON");
 	RENDER_IANA("NAINFO", iana);
 	RENDER_IAPD("PDINFO", iapd);

@@ -45,6 +45,7 @@ Improvements made over the years by OPNsense, Debian and FreeBSD:
 - Support new_raw_option_nnnnn environment variables hex notation for unknown received options
 - Support new_aftr_name environment variable
 - NAINFO configured address environment variable
+- INTERFACE name environment variable
 
 Bug Reports and patch submissions
 

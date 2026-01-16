@@ -64,12 +64,12 @@
 #define DECLARE_LEN(lname)	int lname##_len = 0;
 #define PDINFO_MAX		64
 
-#define RENDER_DEVICE(lstr)	do { \
-	char device[PDINFO_MAX]; \
-	snprintf(device, sizeof(device), "%s=%s", lstr, ifname); \
-	if ((envp[i++] = strdup(device)) == NULL) { \
+#define RENDER_INTERFACE(lstr)	do { \
+	char interface[PDINFO_MAX]; \
+	snprintf(interface, sizeof(interface), "%s=%s", lstr, ifname); \
+	if ((envp[i++] = strdup(interface)) == NULL) { \
 		d_printf(LOG_NOTICE, FNAME, \
-		    "failed to allocate device string"); \
+		    "failed to allocate interface string"); \
 		ret = -1; \
 		goto clean; \
 	} \
@@ -228,7 +228,7 @@ int
 client6_script(char *scriptpath, const char *ifname, int state,
     struct dhcp6_optinfo *optinfo)
 {
-	/* we at least include the device, reason and the terminator */
+	/* we at least include the interface, reason and the terminator */
 	int envc = 3;
 	int i, ret = 0;
 	char **envp;
@@ -285,7 +285,7 @@ client6_script(char *scriptpath, const char *ifname, int state,
 	memset(envp, 0, sizeof(char *) * envc);
 	i = 0;
 
-	RENDER_DEVICE("DEVICE");
+	RENDER_INTERFACE("INTERFACE");
 	RENDER_REASON("REASON");
 	RENDER_IANA("NAINFO", iana);
 	RENDER_IAPD("PDINFO", iapd);

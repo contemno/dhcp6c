@@ -64,7 +64,7 @@
 #define DECLARE_LEN(lname)	int lname##_len = 0;
 #define PDINFO_MAX		64
 
-#define RENDER_INTERFACE(lstr)	do { \
+#define RENDER_IFNAME(lstr)	do { \
 	char interface[PDINFO_MAX]; \
 	snprintf(interface, sizeof(interface), "%s=%s", lstr, ifname); \
 	if ((envp[i++] = strdup(interface)) == NULL) { \
@@ -285,7 +285,7 @@ client6_script(char *scriptpath, const char *ifname, int state,
 	memset(envp, 0, sizeof(char *) * envc);
 	i = 0;
 
-	RENDER_INTERFACE("INTERFACE");
+	RENDER_IFNAME("IFNAME");
 	RENDER_REASON("REASON");
 	RENDER_IANA("NAINFO", iana);
 	RENDER_IAPD("PDINFO", iapd);

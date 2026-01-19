@@ -1812,7 +1812,7 @@ dhcp6_get_options(struct dhcp6opt *p, struct dhcp6opt *ep,
 				goto fail;
 			break;
 		case DH6OPT_AFTR_NAME:
-			if (optlen <= 3 || dhcp6_get_addr(optlen, cp, opt,
+			if (optlen <= 3 || dhcp6_get_domain(optlen, cp, opt,
 			    &optinfo->aftrname_list) == -1)
 				goto fail;
 			break;

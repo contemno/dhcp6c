@@ -116,6 +116,7 @@ void cf_init(void);
 
 %token INTERFACE IFNAME
 %token PREFIX_INTERFACE SLA_ID SLA_LEN IFID EUI64 RANDOM DUID_ID
+%token ALLOW_MISSING
 %token ID_ASSOC IA_PD IAID IA_NA
 %token ADDRESS
 %token REQUEST SEND ALLOW PREFERENCE
@@ -1084,6 +1085,13 @@ ifparam:
 			struct cf_list *l;
 
 			MAKE_CFLIST(l, IFPARAM_IFID_EUI64, NULL, NULL);
+			$$ = l;
+		}
+	|	ALLOW_MISSING EOS
+		{
+			struct cf_list *l;
+
+			MAKE_CFLIST(l, IFPARAM_ALLOW_MISSING, NULL, NULL);
 			$$ = l;
 		}
 	;

@@ -142,7 +142,6 @@ static int configure_duid(char *, struct duid *);
 static int configure_addr(struct cf_list *, struct dhcp6_list *, const char *);
 static int configure_domain(struct cf_list *, struct dhcp6_list *,
     const char *);
-static int set_default_ifid(struct prefix_ifconf *);
 static int set_current_ifid(struct prefix_ifconf *, unsigned long long);
 static int set_random_ifid(struct prefix_ifconf *);
 static void clear_poolconf(struct pool_conf *);
@@ -468,6 +467,7 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 	struct prefix_ifconf *pif;
 	struct cf_list *cfl;
 	int ifid_done = 0;
+	int allow_missing = 0, iface_missing = 0;
 
 	/* duplication check */
 	TAILQ_FOREACH(pif, &iapdc->iapd_pif_list, link) {
@@ -479,6 +479,11 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 		}
 	}
 
+	for (cfl = cfl0->list; cfl; cfl = cfl->next) {
+		if (cfl->type == IFPARAM_ALLOW_MISSING)
+			allow_missing = 1;
+	}
+
 	if ((pif = malloc(sizeof(*pif))) == NULL) {
 		d_printf(LOG_ERR, FNAME,
 		    "memory allocation for %s failed", cfl0->ptr);
@@ -488,10 +493,17 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 
 	/* validate and copy ifname */
 	if (if_nametoindex(cfl0->ptr) == 0) {
-		d_printf(LOG_ERR, FNAME, "%s:%d invalid interface (%s): %s",
-		    configfilename, cfl0->line,
-		    cfl0->ptr, strerror(errno));
-		goto bad;
+		if (!allow_missing) {
+			d_printf(LOG_ERR, FNAME,
+			    "%s:%d invalid interface (%s): %s",
+			    configfilename, cfl0->line,
+			    cfl0->ptr, strerror(errno));
+			goto bad;
+		}
+		d_printf(LOG_WARNING, FNAME, "%s:%d interface (%s) "
+		    "does not exist yet, continuing (allow-missing)",
+		    configfilename, cfl0->line, cfl0->ptr);
+		iface_missing = 1;
 	}
 	if ((pif->ifname = strdup(cfl0->ptr)) == NULL) {
 		d_printf(LOG_ERR, FNAME, "failed to copy ifname");
@@ -518,10 +530,15 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 			break;
 		case IFPARAM_IFID_EUI64:
 			if (set_default_ifid(pif)) {
-				d_printf(LOG_NOTICE, FNAME,
-				    "failed to get default IF ID for %s",
-				    pif->ifname);
-				goto bad;
+				if (!iface_missing) {
+					d_printf(LOG_NOTICE, FNAME,
+					    "failed to get default IF ID "
+					    "for %s", pif->ifname);
+					goto bad;
+				}
+				/* placeholder until the interface appears */
+				set_random_ifid(pif);
+				pif->ifid_pending = 1;
 			}
 			ifid_done = 1;
 			break;
@@ -532,6 +549,9 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 		case IFPARAM_IFID:
 			set_current_ifid(pif, cfl->num);
 			ifid_done = 1;
+			break;
+		case IFPARAM_ALLOW_MISSING:
+			/* handled above */
 			break;
 		default:
 			d_printf(LOG_ERR, FNAME, "%s:%d internal error: "
@@ -546,6 +566,8 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 		    "failed to get default IF ID for %s, using random ID",
 		    pif->ifname);
 		set_random_ifid(pif);
+		if (iface_missing)
+			pif->ifid_pending = 1;
 	}
 
 	TAILQ_INSERT_TAIL(&iapdc->iapd_pif_list, pif, link);
@@ -1218,7 +1240,7 @@ configure_duid(char *str, struct duid *duid)
 }
 
 /* construct EUI-64 based interface ID */
-static int
+int
 set_default_ifid(struct prefix_ifconf *pif)
 {
 	struct ifaddrs *ifa, *ifap;

@@ -504,6 +504,13 @@ add_ifprefix(struct siteprefix *siteprefix, struct dhcp6_prefix *prefix,
 
 	UPDATE_LEASETIME(pip, siteprefix);
 
+	/*
+	 * The interface may not have existed when the configuration was
+	 * parsed (allow-missing); retry deriving its interface ID now.
+	 */
+	if (pif->ifid_pending && set_default_ifid(pif) == 0)
+		pif->ifid_pending = 0;
+
 	/* configure the corresponding address */
 	pip->ifaddr = pip->paddr;
 	for (i = 15; i >= pif->ifid_len / 8; i--) {

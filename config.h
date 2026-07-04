@@ -180,6 +180,9 @@ struct prefix_ifconf {
 	int ifid_len;		/* interface ID length in bits */
 	int ifid_type;		/* EUI-64 and manual (unused?) */
 	char ifid[16];		/* Interface ID, up to 128bits */
+	int ifid_pending;	/* interface was absent at configuration
+				 * (allow-missing); derive the interface ID
+				 * once it appears */
 };
 #define IFID_LEN_DEFAULT 64
 #define SLA_LEN_DEFAULT 16
@@ -275,6 +278,7 @@ enum { DECL_SEND, DECL_ALLOW, DECL_INFO_ONLY, DECL_REQUEST, DECL_DUID,
        DECL_RANGE, DECL_ADDRESSPOOL,
        IFPARAM_SLA_ID, IFPARAM_SLA_LEN,
        IFPARAM_IFID, IFPARAM_IFID_RAND, IFPARAM_IFID_EUI64,
+       IFPARAM_ALLOW_MISSING,
        DHCPOPT_RAPID_COMMIT, DHCPOPT_AUTHINFO,
        DHCPOPT_DNS, DHCPOPT_DNSNAME,
        DHCPOPT_IA_PD, DHCPOPT_IA_NA, DHCPOPT_NTP,
@@ -335,5 +339,6 @@ int is_available_in_pool(struct pool_conf *, struct in6_addr *);
 int get_free_address_from_pool(struct pool_conf *, struct in6_addr *);
 struct host_conf *create_dynamic_hostconf(struct duid *, struct dhcp6_poolspec *);
 char *qstrdup(char *);
+int set_default_ifid(struct prefix_ifconf *);
 
 #endif

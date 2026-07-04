@@ -142,6 +142,7 @@ static int configure_duid(char *, struct duid *);
 static int configure_addr(struct cf_list *, struct dhcp6_list *, const char *);
 static int configure_domain(struct cf_list *, struct dhcp6_list *,
     const char *);
+static int set_default_ifid(struct prefix_ifconf *);
 static int set_current_ifid(struct prefix_ifconf *, unsigned long long);
 static int set_random_ifid(struct prefix_ifconf *);
 static void clear_poolconf(struct pool_conf *);
@@ -536,9 +537,12 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 					    "for %s", pif->ifname);
 					goto bad;
 				}
-				/* placeholder until the interface appears */
+				/*
+				 * use a random placeholder until the
+				 * configuration is reloaded with the
+				 * interface present
+				 */
 				set_random_ifid(pif);
-				pif->ifid_pending = 1;
 			}
 			ifid_done = 1;
 			break;
@@ -566,8 +570,6 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 		    "failed to get default IF ID for %s, using random ID",
 		    pif->ifname);
 		set_random_ifid(pif);
-		if (iface_missing)
-			pif->ifid_pending = 1;
 	}
 
 	TAILQ_INSERT_TAIL(&iapdc->iapd_pif_list, pif, link);
@@ -1240,7 +1242,7 @@ configure_duid(char *str, struct duid *duid)
 }
 
 /* construct EUI-64 based interface ID */
-int
+static int
 set_default_ifid(struct prefix_ifconf *pif)
 {
 	struct ifaddrs *ifa, *ifap;

@@ -479,13 +479,11 @@ is created dynamically
 and may not exist yet at startup.
 The prefix is assigned once the
 .Ar interface
-exists, typically after the configuration is reloaded via
+exists and the configuration is reloaded via
 .Dv SIGHUP .
-If the interface identifier is derived from the interface
+Until then, if the interface identifier is derived from the interface
 .Pq Ar eui-64 ,
-a random identifier is used as a placeholder until the
-.Ar interface
-appears.
+a random identifier is used as a placeholder.
 .El
 .El
 .Sh Authentication statement

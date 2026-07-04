@@ -1,0 +1,84 @@
+name: Build OPNsense package
+
+# Two ways in:
+#  - push to master: builds net/dhcp6c from the pushed commit of THIS repo
+#    (the port's GH_ACCOUNT/GH_TAGNAME are pointed at it), so every merge
+#    produces an installable .pkg artifact.
+#  - workflow_dispatch: builds ANY port from opnsense/ports, with optional
+#    fork/commit overrides.
+#
+# The build runs inside a FreeBSD VM (QEMU) on a stock ubuntu-latest runner
+# via vmactions/freebsd-vm, since OPNsense packages must be built on FreeBSD.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      port:
+        description: "Port origin (category/name)"
+        default: "net/dhcp6c"
+        required: true
+      ports_branch:
+        description: "opnsense/ports branch"
+        default: "stable/25.7"
+        required: true
+      gh_account:
+        description: "GH_ACCOUNT override (fork owner; empty = port default)"
+        default: ""
+        required: false
+      gh_tagname:
+        description: "GH_TAGNAME override (tag or commit; empty = port default)"
+        default: ""
+        required: false
+      freebsd_release:
+        description: "FreeBSD release for the build VM (match target OPNsense base)"
+        default: "14.3"
+        required: true
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve build parameters
+        id: params
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "port=net/dhcp6c"                            >> "$GITHUB_OUTPUT"
+            echo "ports_branch=stable/25.7"                   >> "$GITHUB_OUTPUT"
+            echo "gh_account=${{ github.repository_owner }}"  >> "$GITHUB_OUTPUT"
+            echo "gh_tagname=${{ github.sha }}"               >> "$GITHUB_OUTPUT"
+            echo "freebsd_release=14.3"                       >> "$GITHUB_OUTPUT"
+          else
+            echo "port=${{ inputs.port }}"                       >> "$GITHUB_OUTPUT"
+            echo "ports_branch=${{ inputs.ports_branch }}"       >> "$GITHUB_OUTPUT"
+            echo "gh_account=${{ inputs.gh_account }}"           >> "$GITHUB_OUTPUT"
+            echo "gh_tagname=${{ inputs.gh_tagname }}"           >> "$GITHUB_OUTPUT"
+            echo "freebsd_release=${{ inputs.freebsd_release }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build package in FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: ${{ steps.params.outputs.freebsd_release }}
+          usesh: true
+          prepare: |
+            pkg install -y git
+          run: |
+            set -e
+            sh build/build-package.sh \
+              -p "${{ steps.params.outputs.port }}" \
+              -b "${{ steps.params.outputs.ports_branch }}" \
+              -a "${{ steps.params.outputs.gh_account }}" \
+              -t "${{ steps.params.outputs.gh_tagname }}" \
+              -o ./artifacts
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opnsense-package
+          path: artifacts/*.pkg
+          if-no-files-found: error

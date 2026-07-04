@@ -468,6 +468,7 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 	struct prefix_ifconf *pif;
 	struct cf_list *cfl;
 	int ifid_done = 0;
+	int allow_missing = 0, iface_missing = 0;
 
 	/* duplication check */
 	TAILQ_FOREACH(pif, &iapdc->iapd_pif_list, link) {
@@ -479,6 +480,11 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 		}
 	}
 
+	for (cfl = cfl0->list; cfl; cfl = cfl->next) {
+		if (cfl->type == IFPARAM_ALLOW_MISSING)
+			allow_missing = 1;
+	}
+
 	if ((pif = malloc(sizeof(*pif))) == NULL) {
 		d_printf(LOG_ERR, FNAME,
 		    "memory allocation for %s failed", cfl0->ptr);
@@ -488,10 +494,17 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 
 	/* validate and copy ifname */
 	if (if_nametoindex(cfl0->ptr) == 0) {
-		d_printf(LOG_ERR, FNAME, "%s:%d invalid interface (%s): %s",
-		    configfilename, cfl0->line,
-		    cfl0->ptr, strerror(errno));
-		goto bad;
+		if (!allow_missing) {
+			d_printf(LOG_ERR, FNAME,
+			    "%s:%d invalid interface (%s): %s",
+			    configfilename, cfl0->line,
+			    cfl0->ptr, strerror(errno));
+			goto bad;
+		}
+		d_printf(LOG_WARNING, FNAME, "%s:%d interface (%s) "
+		    "does not exist yet, continuing (allow-missing)",
+		    configfilename, cfl0->line, cfl0->ptr);
+		iface_missing = 1;
 	}
 	if ((pif->ifname = strdup(cfl0->ptr)) == NULL) {
 		d_printf(LOG_ERR, FNAME, "failed to copy ifname");
@@ -518,10 +531,18 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 			break;
 		case IFPARAM_IFID_EUI64:
 			if (set_default_ifid(pif)) {
-				d_printf(LOG_NOTICE, FNAME,
-				    "failed to get default IF ID for %s",
-				    pif->ifname);
-				goto bad;
+				if (!iface_missing) {
+					d_printf(LOG_NOTICE, FNAME,
+					    "failed to get default IF ID "
+					    "for %s", pif->ifname);
+					goto bad;
+				}
+				/*
+				 * use a random placeholder until the
+				 * configuration is reloaded with the
+				 * interface present
+				 */
+				set_random_ifid(pif);
 			}
 			ifid_done = 1;
 			break;
@@ -532,6 +553,9 @@ add_pd_pif(struct iapd_conf *iapdc, struct cf_list *cfl0, u_int32_t if_count)
 		case IFPARAM_IFID:
 			set_current_ifid(pif, cfl->num);
 			ifid_done = 1;
+			break;
+		case IFPARAM_ALLOW_MISSING:
+			/* handled above */
 			break;
 		default:
 			d_printf(LOG_ERR, FNAME, "%s:%d internal error: "

@@ -256,6 +256,7 @@ ecl		\}
 <S_CNF>sla-id { DECHO; return (SLA_ID); }
 <S_CNF>sla-len { DECHO; return (SLA_LEN); }
 <S_CNF>ifid { DECHO; return (IFID); }
+<S_CNF>allow-missing { DECHO; return (ALLOW_MISSING); }
 <S_CNF>random { DECHO; return (RANDOM); }
 <S_CNF>eui-64 { DECHO; return (EUI64); }
 

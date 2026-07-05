@@ -9,8 +9,8 @@
 # usage: build-package.sh [-p category/port] [-b ports-branch]
 #                         [-a gh-account] [-t gh-tag-or-commit] [-o outdir]
 #
-#   -p  port origin to build                    (default: net/dhcp6c)
-#   -b  opnsense/ports branch                   (default: stable/25.7)
+#   -p  port origin to build                    (default: opnsense/dhcp6c)
+#   -b  opnsense/ports branch or tag            (default: master)
 #   -a  override the port's GH_ACCOUNT, e.g. a fork owner
 #   -t  override the port's GH_TAGNAME, a tag or full commit hash
 #   -o  directory to copy the built .pkg into   (default: ./artifacts)
@@ -20,8 +20,8 @@
 
 set -eu
 
-PORT=net/dhcp6c
-PORTS_BRANCH=stable/25.7
+PORT=opnsense/dhcp6c
+PORTS_BRANCH=master
 PORTS_DIR=/usr/ports
 GH_ACCOUNT_OVERRIDE=""
 GH_TAGNAME_OVERRIDE=""

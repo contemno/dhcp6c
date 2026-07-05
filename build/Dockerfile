@@ -5,14 +5,14 @@
 # On a Linux host, use the GitHub Actions workflow or a FreeBSD VM with
 # build-package.sh instead.
 #
-#   podman build --build-arg PORTS_BRANCH=stable/25.7 -t opnsense-portbuild build/
+#   podman build --build-arg PORTS_BRANCH=26.1.11 -t opnsense-portbuild build/
 #   podman run -it --rm \
 #       -v $PWD/packages:/packages \
 #       -v $PWD/distfiles:/usr/ports/distfiles \
 #       opnsense-portbuild
 #
 # Pin the base image to the FreeBSD major of the target OPNsense
-# (`freebsd-version` on the box; OPNsense 25.x = FreeBSD 14.x).
+# (`freebsd-version` on the box; OPNsense 25.x-26.1 = FreeBSD 14.x).
 FROM docker.io/freebsd/freebsd-base:14.3
 
 # pkg is not in the base image; bootstrap it, then a minimal toolset.
@@ -20,7 +20,8 @@ RUN env ASSUME_ALWAYS_YES=yes pkg bootstrap -f && \
     pkg update && \
     pkg install -y git gmake pkgconf autoconf automake libtool
 
-ARG PORTS_BRANCH=stable/25.7
+# opnsense/ports ref: a release tag like 26.1.11, or master
+ARG PORTS_BRANCH=master
 RUN git clone --depth 1 -b ${PORTS_BRANCH} \
         https://github.com/opnsense/ports /usr/ports
 

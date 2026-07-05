@@ -10,14 +10,14 @@
 # containers.
 #
 # usage: build-image.sh <settings> [target]
-#   settings  release configuration under tools/config, e.g. 25.7
+#   settings  release configuration under tools/config, e.g. 26.1
 #   target    tools make target, e.g. vga, serial, nano, dvd
 #             (see https://github.com/opnsense/tools for the full list
 #             and for output locations)
 
 set -eu
 
-SETTINGS=${1:?usage: build-image.sh <settings e.g. 25.7> [target e.g. vga]}
+SETTINGS=${1:?usage: build-image.sh <settings e.g. 26.1> [target e.g. vga]}
 TARGET=${2:-vga}
 
 if [ ! -d /usr/tools ]; then

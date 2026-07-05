@@ -20,7 +20,8 @@ and uploads the resulting `.pkg` as a build artifact.
 For any other package, use *Run workflow* (workflow_dispatch) and set:
 
 - `port` — e.g. `net/dhcp6c`, `dns/dnsmasq`
-- `ports_branch` — opnsense/ports branch matching your release, e.g. `stable/25.7`
+- `ports_branch` — opnsense/ports branch; leave empty to use the repo-wide
+  default (see below)
 - `gh_account` / `gh_tagname` — optional fork owner + tag/commit to build a
   patched source instead of the port's pinned upstream
 - `freebsd_release` — VM version; match the target box (`freebsd-version`;
@@ -78,7 +79,11 @@ this dhcp6c) into the image, point the port at your fork in the checked-out
 Two things worth a 30-second check the first time, since branch and variable
 conventions drift between releases:
 
-- the `opnsense/ports` branch name for your release (`stable/25.7` today)
+- the `opnsense/ports` branch name for your release (`stable/25.7` today).
+  The workflow takes it from the `PORTS_BRANCH` repository variable
+  (Settings > Secrets and variables > Actions > Variables), falling back to
+  `stable/25.7` when unset — a new release only needs the variable flipped,
+  no commit
 - that `ports/net/dhcp6c/Makefile` pins its source via `GH_ACCOUNT` /
   `GH_TAGNAME` (`grep GH_ Makefile`) — the override flags rely on those
 - `vmactions/freebsd-vm` supports your requested `freebsd_release`

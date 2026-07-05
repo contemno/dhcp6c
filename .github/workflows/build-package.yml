@@ -20,9 +20,9 @@ on:
         default: "net/dhcp6c"
         required: true
       ports_branch:
-        description: "opnsense/ports branch"
-        default: "stable/25.7"
-        required: true
+        description: "opnsense/ports branch (empty = PORTS_BRANCH repo variable)"
+        default: ""
+        required: false
       gh_account:
         description: "GH_ACCOUNT override (fork owner; empty = port default)"
         default: ""
@@ -36,6 +36,13 @@ on:
         default: "14.3"
         required: true
 
+# Default opnsense/ports branch. Override without a commit by setting a
+# PORTS_BRANCH repository variable (Settings > Secrets and variables >
+# Actions > Variables) — e.g. flip it to stable/26.1 when the next
+# OPNsense release lands.
+env:
+  PORTS_BRANCH: ${{ vars.PORTS_BRANCH || 'stable/25.7' }}
+
 jobs:
   package:
     runs-on: ubuntu-latest
@@ -48,13 +55,13 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "port=net/dhcp6c"                            >> "$GITHUB_OUTPUT"
-            echo "ports_branch=stable/25.7"                   >> "$GITHUB_OUTPUT"
+            echo "ports_branch=$PORTS_BRANCH"                 >> "$GITHUB_OUTPUT"
             echo "gh_account=${{ github.repository_owner }}"  >> "$GITHUB_OUTPUT"
             echo "gh_tagname=${{ github.sha }}"               >> "$GITHUB_OUTPUT"
             echo "freebsd_release=14.3"                       >> "$GITHUB_OUTPUT"
           else
             echo "port=${{ inputs.port }}"                       >> "$GITHUB_OUTPUT"
-            echo "ports_branch=${{ inputs.ports_branch }}"       >> "$GITHUB_OUTPUT"
+            echo "ports_branch=${{ inputs.ports_branch || env.PORTS_BRANCH }}" >> "$GITHUB_OUTPUT"
             echo "gh_account=${{ inputs.gh_account }}"           >> "$GITHUB_OUTPUT"
             echo "gh_tagname=${{ inputs.gh_tagname }}"           >> "$GITHUB_OUTPUT"
             echo "freebsd_release=${{ inputs.freebsd_release }}" >> "$GITHUB_OUTPUT"

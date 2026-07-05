@@ -13,15 +13,16 @@ FreeBSD; each path below just differs in where that FreeBSD lives.
 
 ## CI packages (recommended)
 
-On every push to `master`, the workflow builds `net/dhcp6c` **from that
+On every push to `master`, the workflow builds `opnsense/dhcp6c` **from that
 commit** by pointing the port's `GH_ACCOUNT`/`GH_TAGNAME` at this repository,
 and uploads the resulting `.pkg` as a build artifact.
 
 For any other package, use *Run workflow* (workflow_dispatch) and set:
 
-- `port` — e.g. `net/dhcp6c`, `dns/dnsmasq`
-- `ports_branch` — opnsense/ports branch; leave empty to use the repo-wide
-  default (see below)
+- `port` — e.g. `opnsense/dhcp6c`, `dns/dnsmasq` (OPNsense's own ports live
+  under the `opnsense/` category of the ports tree, not `net/`)
+- `ports_branch` — opnsense/ports branch or tag; leave empty to use the
+  repo-wide default (see below)
 - `gh_account` / `gh_tagname` — optional fork owner + tag/commit to build a
   patched source instead of the port's pinned upstream
 - `freebsd_release` — VM version; match the target box (`freebsd-version`;
@@ -36,10 +37,10 @@ pkg install -y git
 git clone https://github.com/contemno/dhcp6c && cd dhcp6c
 
 # stock port:
-sh build/build-package.sh -p net/dhcp6c -b stable/25.7
+sh build/build-package.sh -p opnsense/dhcp6c -b 26.1.11
 
 # this fork at a specific commit (example: the allow-missing change):
-sh build/build-package.sh -p net/dhcp6c -b stable/25.7 \
+sh build/build-package.sh -p opnsense/dhcp6c -b 26.1.11 \
     -a contemno -t faaa71afe30844bfcb3286ee97e184b24696b238
 
 ls artifacts/          # -> dhcp6c-*.pkg
@@ -64,7 +65,7 @@ carry the change in the port your firmware is built from.
 ## Full firmware image
 
 ```sh
-sh build/build-image.sh 25.7 vga
+sh build/build-image.sh 26.1 vga
 ```
 
 Thin wrapper around [opnsense/tools](https://github.com/opnsense/tools):
@@ -76,14 +77,15 @@ this dhcp6c) into the image, point the port at your fork in the checked-out
 
 ## Verify on first use
 
-Two things worth a 30-second check the first time, since branch and variable
+A few things worth a 30-second check the first time, since ref and variable
 conventions drift between releases:
 
-- the `opnsense/ports` branch name for your release (`stable/25.7` today).
-  The workflow takes it from the `PORTS_BRANCH` repository variable
-  (Settings > Secrets and variables > Actions > Variables), falling back to
-  `stable/25.7` when unset — a new release only needs the variable flipped,
-  no commit
-- that `ports/net/dhcp6c/Makefile` pins its source via `GH_ACCOUNT` /
+- the `opnsense/ports` ref for your release — releases are tags like
+  `26.1.11`; the repo has **no** `stable/*` branches. The workflow takes
+  the ref from the `PORTS_BRANCH` repository variable (Settings > Secrets
+  and variables > Actions > Variables), falling back to `master` when
+  unset — a new release only needs the variable flipped, no commit
+- that `ports/opnsense/dhcp6c/Makefile` pins its source via `GH_ACCOUNT` /
   `GH_TAGNAME` (`grep GH_ Makefile`) — the override flags rely on those
+  (verified at tag `26.1.11`: `USE_GITHUB` with `GH_ACCOUNT=opnsense`)
 - `vmactions/freebsd-vm` supports your requested `freebsd_release`

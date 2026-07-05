@@ -1,7 +1,7 @@
 name: Build OPNsense package
 
 # Two ways in:
-#  - push to master: builds net/dhcp6c from the pushed commit of THIS repo
+#  - push to master: builds opnsense/dhcp6c from the pushed commit of THIS repo
 #    (the port's GH_ACCOUNT/GH_TAGNAME are pointed at it), so every merge
 #    produces an installable .pkg artifact.
 #  - workflow_dispatch: builds ANY port from opnsense/ports, with optional
@@ -17,10 +17,10 @@ on:
     inputs:
       port:
         description: "Port origin (category/name)"
-        default: "net/dhcp6c"
+        default: "opnsense/dhcp6c"
         required: true
       ports_branch:
-        description: "opnsense/ports branch (empty = PORTS_BRANCH repo variable)"
+        description: "opnsense/ports branch or tag (empty = PORTS_BRANCH repo variable)"
         default: ""
         required: false
       gh_account:
@@ -36,12 +36,13 @@ on:
         default: "14.3"
         required: true
 
-# Default opnsense/ports branch. Override without a commit by setting a
-# PORTS_BRANCH repository variable (Settings > Secrets and variables >
-# Actions > Variables) — e.g. flip it to stable/26.1 when the next
-# OPNsense release lands.
+# Default opnsense/ports ref. opnsense/ports has no stable/* branches;
+# releases are tags like 26.1.11 (plus master). Set the PORTS_BRANCH
+# repository variable (Settings > Secrets and variables > Actions >
+# Variables) to the tag matching your OPNsense release — master is only
+# the fallback when the variable is unset.
 env:
-  PORTS_BRANCH: ${{ vars.PORTS_BRANCH || 'stable/25.7' }}
+  PORTS_BRANCH: ${{ vars.PORTS_BRANCH || 'master' }}
 
 jobs:
   package:
@@ -54,7 +55,7 @@ jobs:
         id: params
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
-            echo "port=net/dhcp6c"                            >> "$GITHUB_OUTPUT"
+            echo "port=opnsense/dhcp6c"                       >> "$GITHUB_OUTPUT"
             echo "ports_branch=$PORTS_BRANCH"                 >> "$GITHUB_OUTPUT"
             echo "gh_account=${{ github.repository_owner }}"  >> "$GITHUB_OUTPUT"
             echo "gh_tagname=${{ github.sha }}"               >> "$GITHUB_OUTPUT"

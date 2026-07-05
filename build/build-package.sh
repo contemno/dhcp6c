@@ -65,6 +65,9 @@ fi
 echo ">>> building $PORT"
 make $MAKE_ARGS package
 
-PKGFILE=$(make $MAKE_ARGS -V PKGFILE)
+# `make package` writes the .pkg to ${WRKDIR}/pkg; ${PKGFILE} points into a
+# ${PACKAGES} repository that is only populated when that directory already
+# exists, so query the always-present workdir copy instead.
+PKGFILE=$(make $MAKE_ARGS -V WRKDIR_PKGFILE)
 cp "$PKGFILE" "$OUT"/
 echo ">>> built: $OUT/$(basename "$PKGFILE")"

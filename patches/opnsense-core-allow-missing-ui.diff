@@ -1,0 +1,85 @@
+diff --git a/src/etc/inc/interfaces.inc b/src/etc/inc/interfaces.inc
+--- a/src/etc/inc/interfaces.inc
++++ b/src/etc/inc/interfaces.inc
+@@ -3008,6 +3008,9 @@
+                     if (isset($lancfg['track6_ifid'])) {
+                         $pd_conf .= "    ifid {$lancfg['track6_ifid']};\n";
+                     }
++                    if (!empty($lancfg['track6_allow_missing'])) {
++                        $pd_conf .= "    allow-missing;\n";
++                    }
+                     $pd_conf .= "  };\n";
+ 
+                     $id = strlen($lancfg['track6_assoc_pd'] ?? '') ? $lancfg['track6_assoc_pd'] : $default_id;
+@@ -3189,6 +3192,9 @@
+                 if (isset($lancfg['track6_ifid'])) {
+                     $id_assoc_statement_prefix .= "    ifid {$lancfg['track6_ifid']};\n";
+                 }
++                if (!empty($lancfg['track6_allow_missing'])) {
++                    $id_assoc_statement_prefix .= "    allow-missing;\n";
++                }
+                 $id_assoc_statement_prefix .= "  };\n";
+             }
+         }
+diff --git a/src/www/interfaces.php b/src/www/interfaces.php
+--- a/src/www/interfaces.php
++++ b/src/www/interfaces.php
+@@ -335,6 +335,7 @@
+     if (!empty($pconfig["{$pconfig['type6']}_assoc_pd"])) {
+         $new_config['track6_assoc_pd'] = $pconfig["{$pconfig['type6']}_assoc_pd"];
+     }
++    $new_config['track6_allow_missing'] = !empty($pconfig["{$pconfig['type6']}_allow_missing"]);
+     if ($pconfig['type6'] == 'track6') {
+         /* this is not needed in the new world */
+         $new_config['dhcpd6track6allowoverride'] = !empty($pconfig['dhcpd6track6allowoverride']);
+@@ -526,6 +527,7 @@
+         'subnetv6',
+         'track6-interface',
+         'track6-prefix-id',
++        'track6_allow_missing',
+         'track6_assoc_pd',
+         'track6_ifid',
+         'track6_prefix_range',
+@@ -549,7 +551,7 @@
+     $pconfig['dhcpd6track6allowoverride'] = isset($a_interfaces[$if]['dhcpd6track6allowoverride']);
+     $pconfig['dhcp6_request_dns'] = empty($pconfig['dhcp6_norequest_dns']);
+ 
+-    foreach(['-interface', '-prefix-id', '-prefix-id--hex', '_assoc_pd', '_ifid', '_ifid--hex', '_prefix_range'] as $fieldname) {
++    foreach(['-interface', '-prefix-id', '-prefix-id--hex', '_allow_missing', '_assoc_pd', '_ifid', '_ifid--hex', '_prefix_range'] as $fieldname) {
+         /* only for form consistency */
+         $pconfig["idassoc6{$fieldname}"] = $pconfig["track6{$fieldname}"];
+     }
+@@ -2703,6 +2705,16 @@
+                             </div>
+                           </td>
+                         </tr>
++                        <tr>
++                          <td><a id="help_for_idassoc6_allow_missing" href="#" class="showhelp"><i class="fa fa-info-circle"></i></a> <?= gettext('Dynamic device') ?></td>
++                          <td>
++                            <input name="idassoc6_allow_missing" type="checkbox" value="yes" <?= !empty($pconfig['idassoc6_allow_missing']) ? 'checked="checked"' : '' ?>/>
++                            <?= gettext('Allow this device to be missing when the DHCPv6 client starts') ?>
++                            <div class="hidden" data-for="help_for_idassoc6_allow_missing">
++                              <?= gettext('When set, the generated DHCPv6 client configuration marks this prefix-interface with allow-missing: a device that does not exist yet (e.g. a ZeroTier or other tunnel interface created after boot) is logged as a warning instead of aborting the client, so DHCPv6 keeps working on all other interfaces. The delegated prefix is applied automatically once the device appears and the interface is configured. Requires a dhcp6c build that supports allow-missing; the stock client rejects the keyword as a configuration error.') ?>
++                            </div>
++                          </td>
++                        </tr>
+                       </tbody>
+                     </table>
+                   </div>
+@@ -2778,6 +2790,16 @@
+                             </div>
+                           </td>
+                         </tr>
++                        <tr>
++                          <td><a id="help_for_track6_allow_missing" href="#" class="showhelp"><i class="fa fa-info-circle"></i></a> <?= gettext('Dynamic device') ?></td>
++                          <td>
++                            <input name="track6_allow_missing" type="checkbox" value="yes" <?= !empty($pconfig['track6_allow_missing']) ? 'checked="checked"' : '' ?>/>
++                            <?= gettext('Allow this device to be missing when the DHCPv6 client starts') ?>
++                            <div class="hidden" data-for="help_for_track6_allow_missing">
++                              <?= gettext('When set, the generated DHCPv6 client configuration marks this prefix-interface with allow-missing: a device that does not exist yet (e.g. a ZeroTier or other tunnel interface created after boot) is logged as a warning instead of aborting the client, so DHCPv6 keeps working on all other interfaces. The delegated prefix is applied automatically once the device appears and the interface is configured. Requires a dhcp6c build that supports allow-missing; the stock client rejects the keyword as a configuration error.') ?>
++                            </div>
++                          </td>
++                        </tr>
+                         <tr>
+                           <td><a id="help_for_dhcpd6_opt" href="#" class="showhelp"><i class="fa fa-info-circle"></i></a> <?= gettext('Manual configuration') ?></td>
+                           <td>

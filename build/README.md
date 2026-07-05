@@ -11,6 +11,10 @@ FreeBSD; each path below just differs in where that FreeBSD lives.
 | Plain script (`build/build-package.sh`) | any FreeBSD VM/jail | one-shot package builds without container plumbing |
 | Image script (`build/build-image.sh`) | a beefy FreeBSD builder | complete custom firmware images via opnsense/tools |
 
+The web-UI side of the `allow-missing` option (a per-interface checkbox that
+makes the config generator emit it) is a separate opnsense/core patch — see
+[`patches/README.md`](../patches/README.md).
+
 ## CI packages (recommended)
 
 On every push to `master`, the workflow builds `opnsense/dhcp6c` **from that
